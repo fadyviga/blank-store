@@ -1,8 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import ColorCard from "./components/ColorCard";
+
 export default function Home() {
+  const router = useRouter();
+
   const slides = [
     "/slider/1.jpg",
     "/slider/2.jpg",
@@ -39,12 +43,12 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
 
           <div className="h-10 flex items-center overflow-visible">
-  <img
-    src="/logo.png"
-    alt="Logo"
-    className="h-54 w-auto object-contain scale-110"
-  />
-</div>
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="h-54 w-auto object-contain scale-110"
+            />
+          </div>
 
           <div className="flex items-center gap-6">
 
@@ -87,18 +91,34 @@ export default function Home() {
         </p>
 
         <div className="flex gap-4">
-          <button className="bg-white text-black px-8 py-4 rounded-full font-semibold hover:scale-105 transition">
+
+          {/* 🔥 زر يوديك للمنتجات */}
+          <button
+            onClick={() => router.push("/products")}
+            className="bg-white text-black px-8 py-4 rounded-full font-semibold hover:scale-105 transition"
+          >
             Explore Collection
           </button>
 
-          <button className="border border-white/20 px-8 py-4 rounded-full hover:bg-white hover:text-black transition">
+          {/* 🔥 زر ينزل للألوان */}
+          <button
+            onClick={() => {
+              const section = document.getElementById("colors");
+              section?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="border border-white/20 px-8 py-4 rounded-full hover:bg-white hover:text-black transition"
+          >
             View Colors
           </button>
+
         </div>
       </section>
 
       {/* Colors */}
-      <section className="py-24 px-6 border-t border-white/10">
+      <section
+        id="colors"
+        className="py-24 px-6 border-t border-white/10"
+      >
         <div className="max-w-6xl mx-auto">
 
           <h2 className="text-4xl font-bold mb-12 text-center">
