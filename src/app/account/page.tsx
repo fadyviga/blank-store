@@ -11,8 +11,9 @@ export default function AccountPage() {
   const { user, loading, updateProfile, changePassword } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
 
+  const [displayName, setDisplayName] = useState("");
   const [phone, setPhone] = useState("");
-  const [phoneMsg, setPhoneMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [profileMsg, setProfileMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
@@ -32,18 +33,19 @@ export default function AccountPage() {
           )
         );
       });
+      if (user.name) setDisplayName(user.name);
       if (user.phone) setPhone(user.phone);
     }
   }, [user, loading, router]);
 
-  const handlePhoneSave = () => {
-    const err = updateProfile({ phone: phone.trim() });
+  const handleProfileSave = () => {
+    const err = updateProfile({ name: displayName.trim(), phone: phone.trim() });
     if (err) {
-      setPhoneMsg({ type: "error", text: err });
+      setProfileMsg({ type: "error", text: err });
     } else {
-      setPhoneMsg({ type: "success", text: "Phone number updated" });
+      setProfileMsg({ type: "success", text: "Profile updated" });
     }
-    setTimeout(() => setPhoneMsg(null), 3000);
+    setTimeout(() => setProfileMsg(null), 3000);
   };
 
   const handlePasswordChange = () => {
@@ -113,6 +115,19 @@ export default function AccountPage() {
 
             <div>
               <label className="block text-sm text-zinc-400 mb-2">
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Your name"
+                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-white/30 transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-zinc-400 mb-2">
                 Phone Number
               </label>
               <div className="flex gap-3">
@@ -124,25 +139,25 @@ export default function AccountPage() {
                   className="flex-1 bg-zinc-900 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-white/30 transition"
                 />
                 <button
-                  onClick={handlePhoneSave}
+                  onClick={handleProfileSave}
                   className="bg-white text-black px-5 py-4 rounded-xl font-bold text-sm hover:scale-[1.02] transition flex items-center gap-2"
                 >
                   <Save size={16} />
                   Save
                 </button>
               </div>
-              {phoneMsg && (
+              {profileMsg && (
                 <p
                   className={`text-sm mt-2 flex items-center gap-1 ${
-                    phoneMsg.type === "success" ? "text-green-400" : "text-red-400"
+                    profileMsg.type === "success" ? "text-green-400" : "text-red-400"
                   }`}
                 >
-                  {phoneMsg.type === "success" ? (
+                  {profileMsg.type === "success" ? (
                     <Check size={14} />
                   ) : (
                     <X size={14} />
                   )}
-                  {phoneMsg.text}
+                  {profileMsg.text}
                 </p>
               )}
             </div>

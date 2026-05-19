@@ -14,6 +14,7 @@ interface AuthUser {
   email: string;
   role: "admin" | "user";
   phone?: string;
+  name?: string;
 }
 
 interface AuthContextType {
@@ -39,6 +40,7 @@ interface StoredUser {
   password: string;
   role: "admin" | "user";
   phone?: string;
+  name?: string;
 }
 
 function getUsers(): StoredUser[] {
@@ -74,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: session.email,
             role: session.role || "user",
             phone: stored?.phone || session.phone || "",
+            name: stored?.name || session.name || "",
           });
         }
       }
@@ -107,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!found) return "No account found with this email";
       if (found.password !== password) return "Incorrect password";
 
-      const session = { id: found.id, email: found.email, role: found.role, phone: found.phone };
+      const session = { id: found.id, email: found.email, role: found.role, phone: found.phone, name: found.name };
       saveSession(session, rememberMe ?? true);
       setUser(session);
       return null;
@@ -157,8 +160,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const index = users.findIndex((u) => u.id === user.id);
       if (index === -1) return "User not found";
       if (data.phone !== undefined) users[index].phone = data.phone;
+      if (data.name !== undefined) users[index].name = data.name;
       saveUsers(users);
-      setUser((prev) => (prev ? { ...prev, phone: users[index].phone || "" } : prev));
+      setUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              phone: users[index].phone || "",
+              name: users[index].name || "",
+            }
+          : prev
+      );
       return null;
     },
     [user]

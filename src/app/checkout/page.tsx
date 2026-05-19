@@ -32,6 +32,13 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
 
+  useEffect(() => {
+    if (user) {
+      setName((prev) => prev || user.name || user.email.split("@")[0] || "");
+      setPhone((prev) => prev || user.phone || "");
+    }
+  }, [user]);
+
   const cartCtx = useCart();
   const cart = cartCtx?.cart ?? [];
   const cartTotal = cartCtx?.cartTotal ?? 0;
