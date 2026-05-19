@@ -64,6 +64,13 @@ export default function CartPage() {
       <h1 className="text-4xl font-bold mb-10">
         Your Cart
       </h1>
+      <button
+  onClick={() => router.push("/")}
+  className="flex items-center gap-2 text-zinc-400 hover:text-white transition mb-8"
+>
+  <ArrowLeft size={18} />
+  Continue Shopping
+</button>
 
       {cart.length === 0 ? (
         <p className="text-zinc-400">
