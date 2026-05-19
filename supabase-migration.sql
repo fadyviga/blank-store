@@ -94,7 +94,7 @@ BEGIN
   VALUES (
     NEW.id,
     NEW.email,
-    '',
+    COALESCE(NEW.raw_user_meta_data->>'phone', ''),
     new_role
   );
   RETURN NEW;

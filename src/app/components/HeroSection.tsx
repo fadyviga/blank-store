@@ -29,8 +29,8 @@ export default function HeroSection() {
           <Image
             src="/logo.png"
             alt="Blank EG"
-            width={200}
-            height={55}
+            width={260}
+            height={72}
             className="object-contain"
             priority
           />

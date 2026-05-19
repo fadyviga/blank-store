@@ -102,14 +102,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     async (email: string, password: string, phone?: string): Promise<string | null> => {
       if (!supabase) return "Supabase is not configured";
-      const { error } = await supabase.auth.signUp({
+
+      const { data, error } = await supabase.auth.signUp({
         email: email.toLowerCase().trim(),
         password,
-        options: {
-          data: { phone: phone || "" },
-        },
       });
+
       if (error) return error.message;
+      if (!data?.user) return "Signup failed. Please try again.";
+
+      const { error: profileErr } = await supabase.from("profiles").upsert({
+        id: data.user.id,
+        email: data.user.email || email.toLowerCase().trim(),
+        phone: phone || "",
+      });
+
+      if (profileErr) return profileErr.message;
+
+      setUser({
+        id: data.user.id,
+        email: data.user.email || email.toLowerCase().trim(),
+        role: "user",
+        phone: phone || "",
+        name: "",
+      });
+
       return null;
     },
     []

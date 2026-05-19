@@ -86,24 +86,24 @@ export default function SizeChart({ open, onClose }: Props) {
                   Size
                 </th>
                 <th className="text-left px-5 py-3.5 font-medium">
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="inline-flex items-center gap-1.5">
                     <span className="text-xs uppercase tracking-[0.2em] text-zinc-400">
                       Length
                     </span>
-                    <span className="flex items-center gap-1 text-zinc-500/50">
-                      <Shirt size={11} />
-                      <ArrowUp size={9} />
+                    <span className="flex items-center gap-0.5 text-zinc-500/40">
+                      <Shirt size={10} />
+                      <ArrowUp size={8} />
                     </span>
                   </div>
                 </th>
                 <th className="text-left px-5 py-3.5 font-medium">
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="inline-flex items-center gap-1.5">
                     <span className="text-xs uppercase tracking-[0.2em] text-zinc-400">
                       Width
                     </span>
-                    <span className="flex items-center gap-1 text-zinc-500/50">
-                      <Shirt size={11} />
-                      <ArrowLeftRight size={9} />
+                    <span className="flex items-center gap-0.5 text-zinc-500/40">
+                      <Shirt size={10} />
+                      <ArrowLeftRight size={8} />
                     </span>
                   </div>
                 </th>
