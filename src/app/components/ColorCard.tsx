@@ -48,13 +48,13 @@ export default function ColorCard({ color }: { color: string }) {
       </h3>
 
       {/* Sizes */}
-      <div className="flex gap-2 justify-center mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-2 justify-center mb-4 w-full">
 
         {["M", "L", "XL", "XXL"].map((s) => (
           <button
             key={s}
             onClick={() => setSize(s)}
-            className={`px-4 py-2 border rounded-full text-sm transition ${
+            className={`px-3 md:px-4 py-2 border rounded-full text-xs md:text-sm transition whitespace-nowrap ${
               size === s
                 ? "bg-white text-black border-white"
                 : "border-white/20 hover:border-white/50"
