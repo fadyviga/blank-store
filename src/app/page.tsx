@@ -10,7 +10,6 @@ export default function Home() {
   ];
 
   const [index, setIndex] = useState(0);
-  const imagesReady = true;
   const slides = [
     "/slider/1.jpg",
     "/slider/2.jpg",
