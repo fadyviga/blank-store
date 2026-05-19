@@ -275,7 +275,11 @@ export default function CheckoutPage() {
                   <div className="flex justify-between text-sm text-zinc-400">
                     <span>Delivery</span>
                     <span className={delivery === 0 ? "text-green-400" : "text-zinc-300"}>
-                      {delivery === 0 ? "Free" : `${delivery} EGP`}
+                      {delivery === 0 ? (
+                        <><s className="text-zinc-600 mr-1.5">50 EGP</s>FREE</>
+                      ) : (
+                        `${delivery} EGP`
+                      )}
                     </span>
                   </div>
                   <div className="flex justify-between text-lg font-bold pt-2 border-t border-white/10">

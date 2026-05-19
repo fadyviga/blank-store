@@ -8,8 +8,9 @@ import {
   Trash2,
   Filter,
   ArrowUpDown,
+  LogIn,
+  Loader2,
 } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
 import {
   loadOrders,
   saveOrders,
@@ -27,15 +28,56 @@ const STATUS_OPTIONS: OrderStatus[] = [
   "cancelled",
 ];
 
+const DASHBOARD_USERNAME = "blank";
+const DASHBOARD_PASSWORD = "blank@2026";
+const STORAGE_KEY = "blank_dashboard_auth";
+
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const [authed, setAuthed] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [loggingIn, setLoggingIn] = useState(false);
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [sortNewest, setSortNewest] = useState(true);
 
   useEffect(() => {
-    setOrders(loadOrders());
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === "true") setAuthed(true);
+    setChecking(false);
   }, []);
+
+  useEffect(() => {
+    if (authed) setOrders(loadOrders());
+  }, [authed]);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError("");
+
+    if (!username.trim() || !password.trim()) {
+      setLoginError("Please fill in all fields");
+      return;
+    }
+
+    if (username.trim() !== DASHBOARD_USERNAME || password !== DASHBOARD_PASSWORD) {
+      setLoginError("Invalid username or password");
+      return;
+    }
+
+    localStorage.setItem(STORAGE_KEY, "true");
+    setAuthed(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    setAuthed(false);
+    setUsername("");
+    setPassword("");
+  };
 
   const filtered = useMemo(() => {
     let result = [...orders];
@@ -52,7 +94,7 @@ export default function DashboardPage() {
 
   const stats = useMemo(() => {
     const revenue = orders.reduce((sum, o) => sum + o.total, 0);
-    const customers = new Set(orders.map((o) => o.customer.phone)).size;
+    const customers = new Set(orders.map((o) => o.customer?.phone)).size;
     return { totalOrders: orders.length, totalRevenue: revenue, totalCustomers: customers };
   }, [orders]);
 
@@ -66,17 +108,54 @@ export default function DashboardPage() {
     setOrders((prev) => updateOrderStatus(id, status));
   };
 
-  if (!user || user.role !== "admin") {
+  if (checking) {
     return (
-      <main className="min-h-screen bg-black text-white p-6 md:p-10 flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <h1 className="text-5xl font-black mb-4">Access Denied</h1>
-          <p className="text-zinc-400 text-lg mb-8">
-            You do not have permission to view this page.
-          </p>
-          <p className="text-zinc-500 text-sm">
-            Please log in with an admin account to access the dashboard.
-          </p>
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-zinc-500" />
+      </main>
+    );
+  }
+
+  if (!authed) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <h1 className="text-3xl font-bold text-center mb-8">
+            Dashboard Login
+          </h1>
+
+          <form onSubmit={handleLogin} className="space-y-5">
+            {loginError && (
+              <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl px-4 py-3 text-center">
+                {loginError}
+              </div>
+            )}
+
+            <input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-white/30 transition"
+            />
+
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-white/30 transition"
+            />
+
+            <button
+              type="submit"
+              disabled={loggingIn}
+              className="w-full bg-white text-black py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <LogIn size={20} />
+              Sign In
+            </button>
+          </form>
         </div>
       </main>
     );
@@ -85,11 +164,19 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-black text-white p-6 md:p-10">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-10">
-          <p className="text-zinc-500 uppercase tracking-[0.3em] mb-3">
-            Blank Store
-          </p>
-          <h1 className="text-5xl font-black">Dashboard</h1>
+        <div className="flex items-center justify-between mb-10">
+          <div>
+            <p className="text-zinc-500 uppercase tracking-[0.3em] mb-3">
+              Blank Store
+            </p>
+            <h1 className="text-5xl font-black">Dashboard</h1>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="text-xs text-zinc-500 hover:text-red-400 transition"
+          >
+            Logout
+          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
@@ -206,24 +293,26 @@ export default function DashboardPage() {
                       </select>
                     </div>
                     <h3 className="text-2xl font-bold">
-                      {order.customer.name}
+                      {order.customer?.name || "Unknown"}
                     </h3>
-                    <p className="text-zinc-400">{order.customer.phone}</p>
+                    <p className="text-zinc-400">{order.customer?.phone || ""}</p>
                     <p className="text-zinc-500 text-sm mt-1">
-                      {order.customer.address}
+                      {order.customer?.address || ""}
                     </p>
                   </div>
 
                   <div className="text-left md:text-right shrink-0">
-                    <p className="text-2xl font-bold">{order.total} EGP</p>
+                    <p className="text-2xl font-bold">{order.total || 0} EGP</p>
                     <p className="text-zinc-500 text-xs mt-1">
-                      {new Date(order.createdAt).toLocaleDateString("en-GB", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {order.createdAt
+                        ? new Date(order.createdAt).toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : ""}
                     </p>
                   </div>
                 </div>
@@ -241,15 +330,17 @@ export default function DashboardPage() {
                           className="w-12 h-12 rounded-xl object-cover"
                         />
                         <div>
-                          <p className="font-medium text-sm">{item.name}</p>
+                          <p className="font-medium text-sm">
+                            {item.name || "Item"}
+                          </p>
                           <p className="text-zinc-500 text-xs">
-                            {item.color} / {item.size} &middot; Qty:{" "}
-                            {item.quantity}
+                            {item.color || ""} / {item.size || ""} &middot; Qty:{" "}
+                            {item.quantity || 0}
                           </p>
                         </div>
                       </div>
                       <p className="font-medium text-sm">
-                        {item.price * item.quantity} EGP
+                        {item.price * item.quantity || 0} EGP
                       </p>
                     </div>
                   ))}

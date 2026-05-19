@@ -12,6 +12,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -25,7 +26,7 @@ export default function LoginPage() {
     }
 
     setLoading(true);
-    const err = await login(email, password);
+    const err = await login(email, password, rememberMe);
     setLoading(false);
 
     if (err) {
@@ -64,6 +65,16 @@ export default function LoginPage() {
             className="w-full bg-zinc-900 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-white/30 transition"
           />
 
+          <label className="flex items-center gap-2 text-sm text-zinc-400 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-4 h-4 rounded border-white/20 bg-zinc-900 accent-white"
+            />
+            Remember me
+          </label>
+
           <button
             type="submit"
             disabled={loading}
@@ -78,19 +89,11 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-zinc-500 space-y-2">
+        <div className="mt-6 text-center text-sm text-zinc-500">
           <p>
             Don&apos;t have an account?{" "}
             <Link href="/register" className="text-white hover:underline">
               Sign up
-            </Link>
-          </p>
-          <p>
-            <Link
-              href="/forgot-password"
-              className="text-zinc-400 hover:text-white transition"
-            >
-              Forgot password?
             </Link>
           </p>
         </div>

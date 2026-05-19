@@ -18,8 +18,8 @@ interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<string | null>;
-  register: (email: string, password: string) => Promise<string | null>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<string | null>;
+  register: (email: string, password: string, rememberMe?: boolean) => Promise<string | null>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("blank_session");
+      const raw = sessionStorage.getItem("blank_session") || localStorage.getItem("blank_session");
       if (raw) {
         const session = JSON.parse(raw);
         if (session && session.email && session.id) {
@@ -67,13 +67,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch {
+      sessionStorage.removeItem("blank_session");
       localStorage.removeItem("blank_session");
     }
     setLoading(false);
   }, []);
 
+  const saveSession = useCallback(
+    (session: { id: string; email: string; role: "admin" | "user" }, rememberMe: boolean) => {
+      const raw = JSON.stringify(session);
+      if (rememberMe) {
+        localStorage.setItem("blank_session", raw);
+        sessionStorage.removeItem("blank_session");
+      } else {
+        sessionStorage.setItem("blank_session", raw);
+        localStorage.removeItem("blank_session");
+      }
+    },
+    []
+  );
+
   const login = useCallback(
-    async (email: string, password: string): Promise<string | null> => {
+    async (email: string, password: string, rememberMe?: boolean): Promise<string | null> => {
       const users = getUsers();
       const found = users.find(
         (u) => u.email === email.toLowerCase().trim()
@@ -82,15 +97,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (found.password !== password) return "Incorrect password";
 
       const session = { id: found.id, email: found.email, role: found.role };
-      localStorage.setItem("blank_session", JSON.stringify(session));
+      saveSession(session, rememberMe ?? true);
       setUser(session);
       return null;
     },
-    []
+    [saveSession]
   );
 
   const register = useCallback(
-    async (email: string, password: string): Promise<string | null> => {
+    async (email: string, password: string, rememberMe?: boolean): Promise<string | null> => {
       const users = getUsers();
       const normalizedEmail = email.toLowerCase().trim();
 
@@ -111,15 +126,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       saveUsers([...users, newUser]);
 
       const session = { id: newUser.id, email: newUser.email, role: newUser.role };
-      localStorage.setItem("blank_session", JSON.stringify(session));
+      saveSession(session, rememberMe ?? true);
       setUser(session);
       return null;
     },
-    []
+    [saveSession]
   );
 
   const logout = useCallback(() => {
     localStorage.removeItem("blank_session");
+    sessionStorage.removeItem("blank_session");
     setUser(null);
   }, []);
 
