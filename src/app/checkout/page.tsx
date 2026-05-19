@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ShoppingBag, Loader2 } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Loader2, Ruler } from "lucide-react";
 import { useCart } from "../hooks/useCart";
 import { useAuth } from "../context/AuthContext";
 import { createOrder, loadOrders, saveOrders } from "../../lib/order";
+import SizeChart from "../components/SizeChart";
 
 interface Errors {
   name?: string;
@@ -29,6 +30,7 @@ export default function CheckoutPage() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Errors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
 
   const cartCtx = useCart();
   const cart = cartCtx?.cart ?? [];
@@ -267,6 +269,16 @@ export default function CheckoutPage() {
                   ))}
                 </div>
 
+                <div className="pt-4 pb-2">
+                  <button
+                    onClick={() => setSizeGuideOpen(true)}
+                    className="inline-flex items-center gap-2 text-xs text-zinc-500 hover:text-white transition"
+                  >
+                    <Ruler size={13} />
+                    Size Guide
+                  </button>
+                </div>
+
                 <div className="space-y-2 pt-2 border-t border-white/10">
                   <div className="flex justify-between text-sm text-zinc-400">
                     <span>Items ({itemCount})</span>
@@ -292,6 +304,10 @@ export default function CheckoutPage() {
           </div>
         )}
       </div>
+      <SizeChart
+        open={sizeGuideOpen}
+        onClose={() => setSizeGuideOpen(false)}
+      />
     </main>
   );
 }
