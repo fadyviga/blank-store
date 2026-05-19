@@ -9,70 +9,54 @@ export default function Home() {
     "/slider/2.jpg",
   ];
 
-  const [active, setActive] = useState(0);
-  const [fading, setFading] = useState<number | null>(null);
-  const activeRef = useRef(0);
+  const [frontSlot, setFrontSlot] = useState(0);
+  const [backSlot, setBackSlot] = useState(0);
+  const [fading, setFading] = useState(false);
+  const frontRef = useRef(0);
 
   useEffect(() => {
     if (slides.length <= 1) return;
 
     const interval = setInterval(() => {
-      const current = activeRef.current;
+      const current = frontRef.current;
       const next = (current + 1) % slides.length;
 
-      setFading(current);
-      setActive(next);
-      activeRef.current = next;
+      setBackSlot(next);
+      requestAnimationFrame(() => setFading(true));
 
-      setTimeout(() => setFading(null), 700);
+      setTimeout(() => {
+        setFrontSlot(next);
+        setBackSlot(next);
+        setFading(false);
+        frontRef.current = next;
+      }, 700);
     }, 3000);
 
     return () => clearInterval(interval);
   }, [slides.length]);
 
   const colors = [
-    "Black",
-    "White",
-    "Blue",
-    "Green",
-    "Gray",
-    "Brown",
-    "Navy",
-    "Burgundy",
-    "Beige",
+    "Black", "White", "Blue", "Green", "Gray",
+    "Brown", "Navy", "Burgundy", "Beige",
   ];
 
   return (
     <main className="min-h-screen text-white">
       <section className="h-screen flex flex-col items-center justify-center text-center px-6 relative overflow-hidden bg-black">
         <div className="absolute inset-0">
-          {slides.map((src, i) => {
-            const isActive = i === active;
-            const isFading = i === fading;
-
-            let opacity = 0;
-            let zIdx = 0;
-
-            if (isActive) {
-              opacity = 1;
-              zIdx = 1;
-            }
-
-            if (isFading) {
-              opacity = 0;
-              zIdx = 2;
-            }
-
-            return (
-              <img
-                key={src}
-                src={src}
-                style={{ opacity, zIndex: zIdx }}
-                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700 pointer-events-none"
-                alt="hero slide"
-              />
-            );
-          })}
+          <img
+            src={slides[backSlot]}
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+            style={{ zIndex: 1 }}
+            alt="hero slide"
+          />
+          <img
+            key={frontSlot}
+            src={slides[frontSlot]}
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-700"
+            style={{ opacity: fading ? 0 : 1, zIndex: 2 }}
+            alt="hero slide"
+          />
         </div>
 
         <div className="mb-6 inline-flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full text-sm font-bold shadow-xl">
@@ -110,7 +94,6 @@ export default function Home() {
           <h2 className="text-4xl font-bold mb-12 text-center">
             9 Color Variants
           </h2>
-
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
             {colors.map((color) => (
               <ColorCard key={color} color={color} />
@@ -124,11 +107,9 @@ export default function Home() {
           <p className="text-zinc-500 uppercase tracking-[0.3em] mb-4">
             About Blank
           </p>
-
           <h2 className="text-5xl font-bold leading-tight mb-8">
             Less effort.<br />More style.
           </h2>
-
           <p className="text-zinc-400 text-lg leading-8">
             Blank is a modern Egyptian streetwear label focused on oversized essentials,
             premium materials, and timeless silhouettes inspired by global fashion culture.
