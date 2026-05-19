@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { User, Package, Save, Lock, Check, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { loadOrders, type Order } from "../../lib/order";
+import { loadUserOrders, type Order } from "../../lib/order";
 
 export default function AccountPage() {
   const router = useRouter();
@@ -25,21 +25,15 @@ export default function AccountPage() {
       router.replace("/login");
       return;
     }
-    if (user?.email) {
-      loadOrders().then((all) => {
-        setOrders(
-          all.filter(
-            (o) => o.customer?.email?.toLowerCase() === user.email.toLowerCase()
-          )
-        );
-      });
+    if (user?.id) {
+      loadUserOrders(user.id).then(setOrders);
       if (user.name) setDisplayName(user.name);
       if (user.phone) setPhone(user.phone);
     }
   }, [user, loading, router]);
 
-  const handleProfileSave = () => {
-    const err = updateProfile({ name: displayName.trim(), phone: phone.trim() });
+  const handleProfileSave = async () => {
+    const err = await updateProfile({ name: displayName.trim(), phone: phone.trim() });
     if (err) {
       setProfileMsg({ type: "error", text: err });
     } else {
@@ -48,7 +42,7 @@ export default function AccountPage() {
     setTimeout(() => setProfileMsg(null), 3000);
   };
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
     setPwMsg(null);
     if (!currentPw || !newPw || !confirmPw) {
       setPwMsg({ type: "error", text: "Please fill in all fields" });
@@ -58,11 +52,11 @@ export default function AccountPage() {
       setPwMsg({ type: "error", text: "Passwords do not match" });
       return;
     }
-    if (newPw.length < 4) {
-      setPwMsg({ type: "error", text: "Password must be at least 4 characters" });
+    if (newPw.length < 6) {
+      setPwMsg({ type: "error", text: "Password must be at least 6 characters" });
       return;
     }
-    const err = changePassword(currentPw, newPw);
+    const err = await changePassword(currentPw, newPw);
     if (err) {
       setPwMsg({ type: "error", text: err });
     } else {

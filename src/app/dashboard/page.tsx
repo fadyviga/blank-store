@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   ShoppingBag,
   Wallet,
@@ -8,9 +9,9 @@ import {
   Trash2,
   Filter,
   ArrowUpDown,
-  LogIn,
   Loader2,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 import {
   loadOrders,
   deleteOrderById,
@@ -28,57 +29,36 @@ const STATUS_OPTIONS: OrderStatus[] = [
   "cancelled",
 ];
 
-const DASHBOARD_USERNAME = "blank";
-const DASHBOARD_PASSWORD = "blank@2026";
-const STORAGE_KEY = "blank_dashboard_auth";
-
 export default function DashboardPage() {
-  const [authed, setAuthed] = useState(false);
-  const [checking, setChecking] = useState(true);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [loginError, setLoginError] = useState("");
-  const [loggingIn, setLoggingIn] = useState(false);
+  const router = useRouter();
+  const { user, loading: authLoading, isAuthenticated, logout } = useAuth();
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [sortNewest, setSortNewest] = useState(true);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+
+  const isAdmin = isAuthenticated && user?.role === "admin";
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "true") setAuthed(true);
-    setChecking(false);
-  }, []);
+    if (authLoading) return;
+    if (!isAuthenticated || !isAdmin) {
+      router.replace("/login");
+    }
+  }, [authLoading, isAuthenticated, isAdmin, router]);
 
   useEffect(() => {
-    if (authed) {
-      loadOrders().then(setOrders);
+    if (isAdmin) {
+      loadOrders().then((data) => {
+        setOrders(data);
+        setOrdersLoading(false);
+      });
     }
-  }, [authed]);
+  }, [isAdmin]);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError("");
-
-    if (!username.trim() || !password.trim()) {
-      setLoginError("Please fill in all fields");
-      return;
-    }
-
-    if (username.trim() !== DASHBOARD_USERNAME || password !== DASHBOARD_PASSWORD) {
-      setLoginError("Invalid username or password");
-      return;
-    }
-
-    localStorage.setItem(STORAGE_KEY, "true");
-    setAuthed(true);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    setAuthed(false);
-    setUsername("");
-    setPassword("");
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
   };
 
   const filtered = useMemo(() => {
@@ -110,7 +90,7 @@ export default function DashboardPage() {
     setOrders(updated);
   };
 
-  if (checking) {
+  if (authLoading || (isAuthenticated && ordersLoading)) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
         <Loader2 size={28} className="animate-spin text-zinc-500" />
@@ -118,47 +98,10 @@ export default function DashboardPage() {
     );
   }
 
-  if (!authed) {
+  if (!isAuthenticated || !isAdmin) {
     return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-        <div className="w-full max-w-sm">
-          <h1 className="text-3xl font-bold text-center mb-8">
-            Dashboard Login
-          </h1>
-
-          <form onSubmit={handleLogin} className="space-y-5">
-            {loginError && (
-              <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl px-4 py-3 text-center">
-                {loginError}
-              </div>
-            )}
-
-            <input
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-white/30 transition"
-            />
-
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-white/30 transition"
-            />
-
-            <button
-              type="submit"
-              disabled={loggingIn}
-              className="w-full bg-white text-black py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              <LogIn size={20} />
-              Sign In
-            </button>
-          </form>
-        </div>
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+        <p className="text-zinc-500">Redirecting...</p>
       </main>
     );
   }
@@ -173,12 +116,15 @@ export default function DashboardPage() {
             </p>
             <h1 className="text-5xl font-black">Dashboard</h1>
           </div>
-          <button
-            onClick={handleLogout}
-            className="text-xs text-zinc-500 hover:text-red-400 transition"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-zinc-500">{user?.email}</span>
+            <button
+              onClick={handleLogout}
+              className="text-xs text-zinc-500 hover:text-red-400 transition"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">

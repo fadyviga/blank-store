@@ -14,7 +14,6 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -58,7 +57,7 @@ export default function RegisterPage() {
     }
 
     setLoading(true);
-    const err = await register(email, password, phone, rememberMe);
+    const err = await register(email, password, phone);
     setLoading(false);
 
     if (err) {
@@ -121,16 +120,6 @@ export default function RegisterPage() {
             onChange={(e) => setConfirm(e.target.value)}
             className="w-full bg-zinc-900 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-white/30 transition"
           />
-
-          <label className="flex items-center gap-2 text-sm text-zinc-400 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="w-4 h-4 rounded border-white/20 bg-zinc-900 accent-white"
-            />
-            Remember me
-          </label>
 
           <button
             type="submit"

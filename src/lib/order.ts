@@ -34,6 +34,7 @@ export interface Order {
   total: number;
   status: OrderStatus;
   createdAt: string;
+  userId?: string;
 }
 
 function generateDisplayId(): string {
@@ -43,16 +44,11 @@ function generateDisplayId(): string {
   return `BLK-${hex}`;
 }
 
-function parseDate(raw: string | undefined): string {
-  if (!raw) return new Date().toISOString();
-  const d = new Date(raw);
-  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
-}
-
 export function createOrder(
   customer: OrderCustomer,
   items: OrderItem[],
-  subtotal: number
+  subtotal: number,
+  userId?: string
 ): Order {
   const delivery = subtotal >= 1000 ? 0 : 50;
   return {
@@ -65,49 +61,8 @@ export function createOrder(
     total: subtotal + delivery,
     status: "pending",
     createdAt: new Date().toISOString(),
+    userId,
   };
-}
-
-export function normalizeOrder(raw: any): Order {
-  const isNew = raw.customer && raw.displayId && raw.createdAt;
-
-  if (isNew) {
-    return raw as Order;
-  }
-
-  return {
-    id: String(raw.id || crypto.randomUUID()),
-    displayId: `BLK-${String(raw.id || Date.now()).slice(-6).toUpperCase().padStart(6, "0")}`,
-    customer: {
-      name: raw.name || "",
-      phone: raw.phone || "",
-      address: raw.address || "",
-      email: raw.customer?.email || raw.email || "",
-    },
-    items: raw.items || [],
-    subtotal: raw.total || 0,
-    delivery: 0,
-    total: raw.total || 0,
-    status: "pending",
-    createdAt: parseDate(raw.date || raw.createdAt),
-  };
-}
-
-function toDB(orders: Order[]) {
-  return orders.map((o) => ({
-    id: o.id,
-    display_id: o.displayId,
-    customer_email: o.customer.email || "",
-    customer_name: o.customer.name,
-    customer_phone: o.customer.phone,
-    customer_address: o.customer.address,
-    items: JSON.stringify(o.items),
-    subtotal: o.subtotal,
-    delivery: o.delivery,
-    total: o.total,
-    status: o.status,
-    created_at: o.createdAt,
-  }));
 }
 
 function fromDB(row: any): Order {
@@ -120,113 +75,115 @@ function fromDB(row: any): Order {
       address: row.customer_address || "",
       email: row.customer_email || "",
     },
-    items: typeof row.items === "string" ? JSON.parse(row.items) : row.items || [],
+    items: [],
     subtotal: row.subtotal || 0,
     delivery: row.delivery || 0,
     total: row.total || 0,
     status: row.status || "pending",
     createdAt: row.created_at || new Date().toISOString(),
+    userId: row.user_id,
   };
 }
 
-export function loadLocal(): Order[] {
-  try {
-    const stored = localStorage.getItem("orders");
-    if (!stored) return [];
-    const parsed = JSON.parse(stored);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map(normalizeOrder);
-  } catch {
-    return [];
-  }
+function toDBRow(order: Order) {
+  return {
+    id: order.id,
+    user_id: order.userId || null,
+    display_id: order.displayId,
+    customer_name: order.customer.name,
+    customer_phone: order.customer.phone,
+    customer_address: order.customer.address,
+    customer_email: order.customer.email || "",
+    subtotal: order.subtotal,
+    delivery: order.delivery,
+    total: order.total,
+    status: order.status,
+    created_at: order.createdAt,
+  };
 }
 
-export function saveLocal(orders: Order[]): void {
-  localStorage.setItem("orders", JSON.stringify(orders));
+export async function saveOrder(order: Order): Promise<string | null> {
+  if (!supabase) return "Supabase is not configured";
+  const { error: orderErr } = await supabase.from("orders").insert(toDBRow(order));
+  if (orderErr) return orderErr.message;
+
+  if (order.items.length > 0) {
+    const items = order.items.map((item) => ({
+      order_id: order.id,
+      product_name: item.name,
+      color: item.color,
+      size: item.size,
+      price: item.price,
+      quantity: item.quantity,
+      image: item.image,
+    }));
+    const { error: itemsErr } = await supabase.from("order_items").insert(items);
+    if (itemsErr) return itemsErr.message;
+  }
+
+  return null;
 }
 
 export async function loadOrders(): Promise<Order[]> {
-  const local = loadLocal();
-
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (!error && data) {
-        const remote = data.map(fromDB);
-        const remoteIds = new Set(remote.map((o) => o.id));
-        const localOnly = local.filter((o) => !remoteIds.has(o.id));
-        const merged = [...remote, ...localOnly];
-        saveLocal(merged);
-        return merged;
-      }
-    } catch {
-      // supabase fetch failed, fall through to local
-    }
-  }
-
-  return local;
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*, order_items(*)")
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return data.map((row: any) => {
+    const order = fromDB(row);
+    order.items = (row.order_items || []).map((item: any) => ({
+      id: item.id,
+      name: item.product_name,
+      color: item.color || "",
+      size: item.size || "",
+      price: item.price,
+      quantity: item.quantity,
+      image: item.image || "",
+    }));
+    return order;
+  });
 }
 
-export async function saveOrders(orders: Order[]): Promise<void> {
-  saveLocal(orders);
-  if (!supabase) return;
-  try {
-    const existing = await supabase.from("orders").select("id");
-    const existingIds = new Set((existing.data || []).map((r: any) => r.id));
-    const toInsert = orders.filter((o) => !existingIds.has(o.id));
-    if (toInsert.length > 0) {
-      await supabase.from("orders").insert(toDB(toInsert));
-    }
-    for (const order of orders) {
-      await supabase
-        .from("orders")
-        .update({
-          status: order.status,
-          customer_name: order.customer.name,
-          customer_phone: order.customer.phone,
-          customer_address: order.customer.address,
-        })
-        .eq("id", order.id);
-    }
-  } catch {}
-}
-
-export async function syncOrderToSupabase(order: Order): Promise<void> {
-  if (!supabase) return;
-  try {
-    await supabase.from("orders").insert(toDB([order]));
-  } catch {}
+export async function loadUserOrders(userId: string): Promise<Order[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*, order_items(*)")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return data.map((row: any) => {
+    const order = fromDB(row);
+    order.items = (row.order_items || []).map((item: any) => ({
+      id: item.id,
+      name: item.product_name,
+      color: item.color || "",
+      size: item.size || "",
+      price: item.price,
+      quantity: item.quantity,
+      image: item.image || "",
+    }));
+    return order;
+  });
 }
 
 export async function updateOrderStatus(
   id: string,
   status: OrderStatus
 ): Promise<Order[]> {
-  const orders = loadLocal().map((o) =>
-    o.id === id ? { ...o, status } : o
-  );
-  saveLocal(orders);
   if (supabase) {
-    try {
-      await supabase.from("orders").update({ status }).eq("id", id);
-    } catch {}
+    await supabase.from("orders").update({ status }).eq("id", id);
   }
-  return orders;
+  return loadOrders();
 }
 
 export async function deleteOrderById(id: string): Promise<Order[]> {
-  const orders = loadLocal().filter((o) => o.id !== id);
-  saveLocal(orders);
   if (supabase) {
-    try {
-      await supabase.from("orders").delete().eq("id", id);
-    } catch {}
+    await supabase.from("orders").delete().eq("id", id);
   }
-  return orders;
+  return loadOrders();
 }
 
 export const STATUS_COLORS: Record<OrderStatus, string> = {
