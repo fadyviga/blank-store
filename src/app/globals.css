@@ -109,3 +109,39 @@ main {
 .animate-dot-pulse {
   animation: dot-pulse 1.5s ease-in-out infinite;
 }
+
+@keyframes hero-zoom {
+  from { transform: scale(1); }
+  to { transform: scale(1.1); }
+}
+
+.animate-hero-zoom {
+  animation: hero-zoom 8s ease-in-out infinite alternate;
+}
+
+@keyframes badge-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-badge-float {
+  animation: badge-float 4s ease-in-out infinite;
+}
+
+@keyframes badge-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(255,255,255,0.05), 0 0 60px rgba(255,255,255,0.02); }
+  50% { box-shadow: 0 0 40px rgba(255,255,255,0.12), 0 0 80px rgba(255,255,255,0.04); }
+}
+
+.animate-badge-glow {
+  animation: badge-glow 3s ease-in-out infinite;
+}
+
+@keyframes scroll-bounce {
+  0%, 100% { transform: translateY(0); opacity: 0.6; }
+  50% { transform: translateY(6px); opacity: 1; }
+}
+
+.animate-scroll-bounce {
+  animation: scroll-bounce 2s ease-in-out infinite;
+}
