@@ -81,3 +81,31 @@ main {
 .animate-pop-in {
   animation: pop-in 0.35s ease-out;
 }
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.animate-fade-out {
+  animation: fade-out 1s ease-out forwards;
+}
+
+@keyframes subtle-zoom {
+  from { transform: scale(1); }
+  to { transform: scale(1.06); }
+}
+
+.animate-zoom {
+  animation: subtle-zoom 8s ease-in-out infinite alternate;
+}
+
+@keyframes dot-pulse {
+  0% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.4; }
+}
+
+.animate-dot-pulse {
+  animation: dot-pulse 1.5s ease-in-out infinite;
+}
