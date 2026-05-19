@@ -59,33 +59,35 @@ export default function Home() {
           />
         </div>
 
-        <div className="mb-6 inline-flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full text-sm font-bold shadow-xl">
-          🔥 Limited Offer — 10% OFF
-        </div>
+        <div className="bg-zinc-950/40 backdrop-blur-sm px-8 py-10 md:px-14 md:py-12 rounded-3xl max-w-lg w-full">
+          <div className="mb-6 inline-flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full text-sm font-bold shadow-xl">
+            🔥 Limited Offer — 10% OFF
+          </div>
 
-        <p className="uppercase tracking-[0.4em] text-sm text-zinc-400 mb-4">
-          2026 STREETWEAR
-        </p>
+          <p className="uppercase tracking-[0.4em] text-sm text-zinc-400 mb-4">
+            2026 STREETWEAR
+          </p>
 
-        <h1 className="text-6xl md:text-8xl font-black leading-none mb-6">
-          BLANK EG
-        </h1>
+          <h1 className="text-6xl md:text-8xl font-black leading-none mb-6">
+            BLANK EG
+          </h1>
 
-        <p className="max-w-xl text-zinc-400 text-lg mb-8">
-          Premium oversized essentials designed for the next generation.
-        </p>
+          <p className="max-w-xl text-zinc-300 text-lg mb-8">
+            Premium oversized essentials designed for the next generation.
+          </p>
 
-        <div className="flex justify-center">
-          <button
-            onClick={() =>
-              document
-                .getElementById("products")
-                ?.scrollIntoView({ behavior: "smooth" })
-            }
-            className="bg-white text-black px-10 py-4 rounded-full font-semibold text-lg hover:scale-105 transition shadow-2xl"
-          >
-            Shop Now
-          </button>
+          <div className="flex justify-center">
+            <button
+              onClick={() =>
+                document
+                  .getElementById("products")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
+              className="bg-white text-black px-10 py-4 rounded-full font-semibold text-lg hover:scale-105 transition shadow-2xl"
+            >
+              Shop Now
+            </button>
+          </div>
         </div>
       </section>
 
