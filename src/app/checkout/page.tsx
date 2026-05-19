@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function CheckoutPage() {
@@ -8,11 +8,34 @@ export default function CheckoutPage() {
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+
+  const [cart, setCart] = useState<any[]>([]);
+  const [totalPrice, setTotalPrice] = useState(0);
+
+  // تحميل الكارت
+  useEffect(() => {
+    const stored = localStorage.getItem("cart");
+
+    if (stored) {
+      const parsedCart = JSON.parse(stored);
+
+      setCart(parsedCart);
+
+      const total = parsedCart.reduce(
+        (sum: number, item: any) =>
+          sum + item.price * item.quantity,
+        0
+      );
+
+      setTotalPrice(total);
+    }
+  }, []);
 
   const handleSubmit = (e: any) => {
     e.preventDefault();
 
-    if (!name || !phone) return;
+    if (!name || !phone || !address) return;
 
     const stored = localStorage.getItem("orders");
     const orders = stored ? JSON.parse(stored) : [];
@@ -21,11 +44,15 @@ export default function CheckoutPage() {
       id: Date.now(),
       name,
       phone,
+      address,
+      items: cart,
+      total: totalPrice,
       date: new Date().toLocaleString(),
     });
 
     localStorage.setItem("orders", JSON.stringify(orders));
 
+    // مسح الكارت
     localStorage.removeItem("cart");
 
     router.push("/thanks");
@@ -45,6 +72,7 @@ export default function CheckoutPage() {
 
         <div className="space-y-5">
 
+          {/* الاسم */}
           <input
             type="text"
             placeholder="Your Name"
@@ -54,6 +82,7 @@ export default function CheckoutPage() {
             className="w-full bg-black border border-white/10 rounded-xl px-5 py-4 outline-none"
           />
 
+          {/* الرقم */}
           <input
             type="tel"
             placeholder="Phone Number"
@@ -63,6 +92,22 @@ export default function CheckoutPage() {
             className="w-full bg-black border border-white/10 rounded-xl px-5 py-4 outline-none"
           />
 
+          {/* العنوان */}
+          <input
+            type="text"
+            placeholder="Address"
+            required
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className="w-full bg-black border border-white/10 rounded-xl px-5 py-4 outline-none"
+          />
+
+          {/* الإجمالي */}
+          <div className="w-full bg-black border border-white/10 rounded-xl px-5 py-4 text-zinc-400">
+            Total: {totalPrice} EGP
+          </div>
+
+          {/* زر الطلب */}
           <button
             type="submit"
             className="w-full bg-white text-black py-4 rounded-xl font-bold hover:scale-[1.02] transition"

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ColorCard from "./components/ColorCard";
+import { ShoppingCart } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
@@ -60,15 +61,14 @@ export default function Home() {
               WhatsApp
             </a>
 
-            <button className="bg-white text-black px-5 py-2 rounded-full text-sm font-medium hover:scale-105 transition">
-              Shop Now
-            </button>
             <button
   onClick={() => router.push("/cart")}
-  className="text-sm text-zinc-300 hover:text-white transition"
+  className="flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full text-sm font-medium hover:scale-105 transition"
 >
+  <ShoppingCart size={18} />
   Cart
 </button>
+            
 
           </div>
         </div>

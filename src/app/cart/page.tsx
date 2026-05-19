@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Minus, Plus, Trash2 } from "lucide-react";
 
 export default function CartPage() {
   const [cart, setCart] = useState<any[]>([]);
@@ -15,13 +16,42 @@ export default function CartPage() {
     }
   }, []);
 
+  // تحديث localStorage
+  const updateCart = (newCart: any[]) => {
+    setCart(newCart);
+    localStorage.setItem("cart", JSON.stringify(newCart));
+  };
+
+  // زيادة
+  const increaseQty = (index: number) => {
+    const newCart = [...cart];
+    newCart[index].quantity += 1;
+    updateCart(newCart);
+  };
+
+  // تقليل
+  const decreaseQty = (index: number) => {
+    const newCart = [...cart];
+
+    if (newCart[index].quantity > 1) {
+      newCart[index].quantity -= 1;
+      updateCart(newCart);
+    }
+  };
+
+  // حذف
+  const removeItem = (index: number) => {
+    const newCart = cart.filter((_, i) => i !== index);
+    updateCart(newCart);
+  };
+
   const total = cart.reduce(
-    (sum, item) => sum + item.price,
+    (sum, item) => sum + item.price * item.quantity,
     0
   );
 
   return (
-    <main className="min-h-screen bg-black text-white p-10">
+    <main className="min-h-screen bg-black text-white p-6 md:p-10">
 
       <h1 className="text-4xl font-bold mb-10">
         Your Cart
@@ -33,40 +63,88 @@ export default function CartPage() {
         </p>
       ) : (
         <>
-          <div className="space-y-4 mb-10">
+          <div className="space-y-5 mb-10">
 
             {cart.map((item, index) => (
               <div
                 key={index}
-                className="border border-white/10 rounded-2xl p-5 flex justify-between"
+                className="border border-white/10 rounded-3xl p-5 flex flex-col md:flex-row gap-5 md:items-center justify-between"
               >
-                <div>
-                  <h2 className="font-bold text-xl">
-                    {item.name}
-                  </h2>
 
-                  <p className="text-zinc-400">
-                    {item.color} / {item.size}
-                  </p>
+                {/* صورة */}
+                <div className="flex gap-5">
+
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="w-28 h-28 object-cover rounded-2xl"
+                  />
+
+                  <div>
+                    <h2 className="font-bold text-2xl">
+                      {item.name}
+                    </h2>
+
+                    <p className="text-zinc-400 mt-1">
+                      {item.color} / {item.size}
+                    </p>
+
+                    <p className="mt-3 font-bold">
+                      {item.price} EGP
+                    </p>
+                  </div>
+
                 </div>
 
-                <p className="font-bold">
-                  {item.price} EGP
-                </p>
+                {/* التحكم */}
+                <div className="flex items-center gap-4">
+
+                  {/* ناقص */}
+                  <button
+                    onClick={() => decreaseQty(index)}
+                    className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center"
+                  >
+                    <Minus size={16} />
+                  </button>
+
+                  {/* الكمية */}
+                  <span className="text-xl font-bold">
+                    {item.quantity}
+                  </span>
+
+                  {/* زائد */}
+                  <button
+                    onClick={() => increaseQty(index)}
+                    className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center"
+                  >
+                    <Plus size={16} />
+                  </button>
+
+                  {/* حذف */}
+                  <button
+                    onClick={() => removeItem(index)}
+                    className="ml-4 text-red-500"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+
+                </div>
+
               </div>
             ))}
 
           </div>
 
-          <div className="flex justify-between items-center">
+          {/* الإجمالي */}
+          <div className="flex flex-col md:flex-row gap-5 justify-between items-center border-t border-white/10 pt-6">
 
-            <h2 className="text-2xl font-bold">
+            <h2 className="text-3xl font-bold">
               Total: {total} EGP
             </h2>
 
             <button
               onClick={() => router.push("/checkout")}
-              className="bg-white text-black px-8 py-4 rounded-full font-semibold"
+              className="bg-white text-black px-8 py-4 rounded-full font-bold hover:scale-105 transition"
             >
               Checkout
             </button>
