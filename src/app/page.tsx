@@ -10,7 +10,11 @@ export default function Home() {
   ];
 
   const [index, setIndex] = useState(0);
-  const [imagesReady, setImagesReady] = useState(false);
+  const imagesReady = true;
+  const slides = [
+    "/slider/1.jpg",
+    "/slider/2.jpg",
+  ];
 
   useEffect(() => {
     if (slides.length === 0) return;
@@ -64,8 +68,8 @@ export default function Home() {
               }`}
             />
           ))}
-          {!imagesReady && <div className="absolute inset-0 bg-black" />}
-          <div className="absolute inset-0 bg-black/60" />
+          {!imagesReady && <div className="absolute inset-0 bg-zinc-900" />}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/50" />
         </div>
 
         {/* Offer */}
