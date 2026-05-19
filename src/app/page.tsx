@@ -1,23 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import ColorCard from "./components/ColorCard";
-import { ShoppingCart } from "lucide-react";
-import { useCart } from "./hooks/useCart";
 
 export default function Home() {
-  const router = useRouter();
-
   const slides = [
     "/slider/1.jpg",
     "/slider/2.jpg",
   ];
 
   const [index, setIndex] = useState(0);
-  const { cartCount } = useCart();
 
-  // slider loop
   useEffect(() => {
     const interval = setInterval(() => {
       setIndex((prev) => (prev + 1) % slides.length);
@@ -43,48 +36,6 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white">
 
-      {/* Navbar */}
-      <nav className="fixed top-0 w-full z-50 backdrop-blur-md bg-black/40 border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-
-          {/* Logo */}
-          <div className="h-10 flex items-center">
-  <img
-    src="/logo.png"
-    alt="Logo"
-    className="h-48 w-auto object-contain"
-  />
-</div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-6">
-
-            <a
-              href="https://wa.me/201287659463?text=Hey%20Blank%20EG%20👋%20I%20want%20to%20know%20more%20about%20your%20offers."
-              target="_blank"
-              className="text-sm text-zinc-300 hover:text-white transition"
-            >
-              WhatsApp
-            </a>
-
-            <button
-              onClick={() => router.push("/cart")}
-              className="relative flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full text-sm font-medium hover:scale-105 transition"
-            >
-              <ShoppingCart size={18} />
-              Cart
-
-              {cartCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                  {cartCount}
-                </span>
-              )}
-            </button>
-
-          </div>
-        </div>
-      </nav>
-
       {/* HERO */}
       <section className="h-screen flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
 
@@ -93,6 +44,7 @@ export default function Home() {
         <img
   src={slides[safeIndex]}
   className="w-full h-full object-cover"
+  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
 />
           <div className="absolute inset-0 bg-black/60" />
         </div>

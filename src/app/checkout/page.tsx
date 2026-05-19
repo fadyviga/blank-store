@@ -1,23 +1,287 @@
 "use client";
 
-import { useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, ShoppingBag, Loader2 } from "lucide-react";
+import { useCart } from "../hooks/useCart";
+import { useAuth } from "../context/AuthContext";
+import { createOrder, loadOrders, saveOrders } from "../../lib/order";
 
-export default function TestSupabase() {
+interface Errors {
+  name?: string;
+  phone?: string;
+  address?: string;
+}
+
+export default function CheckoutPage() {
+  const router = useRouter();
+  const { isAuthenticated, loading } = useAuth();
+
   useEffect(() => {
-    const test = async () => {
-      const { data, error } = await supabase.from("orders").select("*");
+    if (!loading && !isAuthenticated) {
+      router.push("/login");
+    }
+  }, [isAuthenticated, loading, router]);
 
-      console.log("DATA:", data);
-      console.log("ERROR:", error);
-    };
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [errors, setErrors] = useState<Errors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    test();
-  }, []);
+  const cartCtx = useCart();
+  const cart = cartCtx?.cart ?? [];
+  const cartTotal = cartCtx?.cartTotal ?? 0;
+  const clearCart = cartCtx?.clearCart ?? (() => {});
+
+  const validate = (): Errors => {
+    const errs: Errors = {};
+    if (!name.trim()) errs.name = "Please enter your name";
+    if (!phone.trim()) errs.phone = "Please enter your phone number";
+    if (!address.trim()) errs.address = "Please enter your delivery address";
+    return errs;
+  };
+
+  const handleBlur = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    setErrors(validate());
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    setTouched({ name: true, phone: true, address: true });
+    const newErrors = validate();
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) return;
+
+    if (!Array.isArray(cart) || cart.length === 0) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const order = createOrder(
+        {
+          name: name.trim(),
+          phone: phone.trim(),
+          address: address.trim(),
+        },
+        cart,
+        cartTotal
+      );
+
+      const orders = loadOrders();
+      orders.push(order);
+      saveOrders(orders);
+      clearCart();
+
+      await new Promise((r) => setTimeout(r, 600));
+      router.push(`/thanks?id=${order.displayId}`);
+    } catch {
+      setIsSubmitting(false);
+    }
+  };
+
+  const inputClass = (field: string) =>
+    `w-full bg-black border rounded-xl px-5 py-4 outline-none transition ${
+      touched[field] && errors[field as keyof Errors]
+        ? "border-red-500"
+        : "border-white/10 focus:border-white/30"
+    }`;
+
+  const itemCount = Array.isArray(cart)
+    ? cart.reduce((sum, item) => sum + (item.quantity || 0), 0)
+    : 0;
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-2 border-white/20 border-t-white rounded-full" />
+      </main>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+        <p className="text-zinc-500">Redirecting to login...</p>
+      </main>
+    );
+  }
 
   return (
-    <div className="p-10 text-white">
-      Check console for Supabase test
-    </div>
+    <main className="min-h-screen bg-black text-white p-6 md:p-10">
+      <div className="max-w-2xl mx-auto">
+        <button
+          onClick={() => router.push("/cart")}
+          className="flex items-center gap-2 text-zinc-400 hover:text-white transition mb-8"
+        >
+          <ArrowLeft size={18} />
+          Back to Cart
+        </button>
+
+        <h1 className="text-4xl font-bold mb-8">Checkout</h1>
+
+        {!Array.isArray(cart) || cart.length === 0 ? (
+          <div className="text-center py-20">
+            <ShoppingBag size={48} className="mx-auto text-zinc-600 mb-4" />
+            <p className="text-zinc-400 text-lg mb-6">Your cart is empty</p>
+            <button
+              onClick={() => router.push("/")}
+              className="bg-white text-black px-8 py-4 rounded-full font-bold"
+            >
+              Start Shopping
+            </button>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-5 gap-8">
+            <div className="md:col-span-3 order-2 md:order-1">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <label className="block text-sm text-zinc-400 mb-2">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Ahmed Hassan"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onBlur={() => handleBlur("name")}
+                    className={inputClass("name")}
+                  />
+                  {touched.name && errors.name && (
+                    <p className="text-red-400 text-sm mt-1.5 flex items-center gap-1">
+                      <span>⚠</span> {errors.name}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm text-zinc-400 mb-2">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. 01012345678"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    onBlur={() => handleBlur("phone")}
+                    className={inputClass("phone")}
+                  />
+                  {touched.phone && errors.phone && (
+                    <p className="text-red-400 text-sm mt-1.5 flex items-center gap-1">
+                      <span>⚠</span> {errors.phone}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm text-zinc-400 mb-2">
+                    Delivery Address
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 15 El-Tahrir St, Downtown, Cairo"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    onBlur={() => handleBlur("address")}
+                    className={inputClass("address")}
+                  />
+                  {touched.address && errors.address && (
+                    <p className="text-red-400 text-sm mt-1.5 flex items-center gap-1">
+                      <span>⚠</span> {errors.address}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 text-sm text-zinc-400 bg-zinc-900 rounded-xl px-4 py-3 border border-white/5">
+                  <span>💰</span>
+                  <span>Cash on delivery available</span>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition ${
+                    isSubmitting
+                      ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                      : "bg-white text-black hover:scale-[1.02] cursor-pointer"
+                  }`}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 size={20} className="animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingBag size={20} />
+                      Place Order
+                    </>
+                  )}
+                </button>
+
+                <p className="text-center text-xs text-zinc-500">
+                  You&apos;ll receive a confirmation message shortly after
+                  placing your order.
+                </p>
+              </form>
+            </div>
+
+            <div className="md:col-span-2 order-1 md:order-2">
+              <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 sticky top-24">
+                <h2 className="text-lg font-bold mb-5">Order Summary</h2>
+
+                <div className="space-y-4 mb-5">
+                  {cart.map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex gap-3 pb-4 border-b border-white/5 last:border-0"
+                    >
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-16 h-16 rounded-xl object-cover shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">
+                          {item.name}
+                        </p>
+                        <p className="text-zinc-400 text-xs mt-0.5">
+                          {item.color} / {item.size}
+                        </p>
+                        <p className="text-zinc-500 text-xs mt-0.5">
+                          Qty: {item.quantity}
+                        </p>
+                      </div>
+                      <p className="text-sm font-medium shrink-0">
+                        {item.price * item.quantity} EGP
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-white/10">
+                  <div className="flex justify-between text-sm text-zinc-400">
+                    <span>Items ({itemCount})</span>
+                    <span>{cartTotal} EGP</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-zinc-400">
+                    <span>Delivery</span>
+                    <span className="text-green-400">Free</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold pt-2 border-t border-white/10">
+                    <span>Total</span>
+                    <span>{cartTotal} EGP</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }

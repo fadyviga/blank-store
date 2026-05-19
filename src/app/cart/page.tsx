@@ -14,12 +14,14 @@ export default function CartPage() {
   const [bumpIndex, setBumpIndex] = useState<number | null>(null);
 
   const increaseQty = (index: number) => {
+    if (!cart[index]) return;
     updateQuantity(index, cart[index].quantity + 1);
     setBumpIndex(index);
     setTimeout(() => setBumpIndex(null), 200);
   };
 
   const decreaseQty = (index: number) => {
+    if (!cart[index]) return;
     updateQuantity(index, cart[index].quantity - 1);
     setBumpIndex(index);
     setTimeout(() => setBumpIndex(null), 200);
@@ -27,6 +29,7 @@ export default function CartPage() {
 
   const removeItem = (index: number) => {
     const item = cart[index];
+    if (!item) return;
     removeFromCart(index);
     showToast(`${item.name} removed from cart`, "info");
   };

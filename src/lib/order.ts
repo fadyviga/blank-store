@@ -109,3 +109,22 @@ export function deleteOrderById(id: string): Order[] {
   saveOrders(orders);
   return orders;
 }
+
+export function updateOrderStatus(
+  id: string,
+  status: OrderStatus
+): Order[] {
+  const orders = loadOrders().map((o) =>
+    o.id === id ? { ...o, status } : o
+  );
+  saveOrders(orders);
+  return orders;
+}
+
+export const STATUS_COLORS: Record<OrderStatus, string> = {
+  pending: "text-yellow-400 border-yellow-500/30 bg-yellow-500/10",
+  confirmed: "text-blue-400 border-blue-500/30 bg-blue-500/10",
+  processing: "text-purple-400 border-purple-500/30 bg-purple-500/10",
+  completed: "text-green-400 border-green-500/30 bg-green-500/10",
+  cancelled: "text-red-400 border-red-500/30 bg-red-500/10",
+};
