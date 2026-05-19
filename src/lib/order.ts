@@ -1,3 +1,5 @@
+import { supabase } from "./supabase";
+
 export type OrderStatus =
   | "pending"
   | "confirmed"
@@ -80,7 +82,7 @@ export function normalizeOrder(raw: any): Order {
       name: raw.name || "",
       phone: raw.phone || "",
       address: raw.address || "",
-      email: "",
+      email: raw.customer?.email || raw.email || "",
     },
     items: raw.items || [],
     subtotal: raw.total || 0,
@@ -91,7 +93,43 @@ export function normalizeOrder(raw: any): Order {
   };
 }
 
-export function loadOrders(): Order[] {
+function toDB(orders: Order[]) {
+  return orders.map((o) => ({
+    id: o.id,
+    display_id: o.displayId,
+    customer_email: o.customer.email || "",
+    customer_name: o.customer.name,
+    customer_phone: o.customer.phone,
+    customer_address: o.customer.address,
+    items: JSON.stringify(o.items),
+    subtotal: o.subtotal,
+    delivery: o.delivery,
+    total: o.total,
+    status: o.status,
+    created_at: o.createdAt,
+  }));
+}
+
+function fromDB(row: any): Order {
+  return {
+    id: row.id,
+    displayId: row.display_id,
+    customer: {
+      name: row.customer_name || "",
+      phone: row.customer_phone || "",
+      address: row.customer_address || "",
+      email: row.customer_email || "",
+    },
+    items: typeof row.items === "string" ? JSON.parse(row.items) : row.items || [],
+    subtotal: row.subtotal || 0,
+    delivery: row.delivery || 0,
+    total: row.total || 0,
+    status: row.status || "pending",
+    createdAt: row.created_at || new Date().toISOString(),
+  };
+}
+
+export function loadLocal(): Order[] {
   try {
     const stored = localStorage.getItem("orders");
     if (!stored) return [];
@@ -103,24 +141,82 @@ export function loadOrders(): Order[] {
   }
 }
 
-export function saveOrders(orders: Order[]): void {
+export function saveLocal(orders: Order[]): void {
   localStorage.setItem("orders", JSON.stringify(orders));
 }
 
-export function deleteOrderById(id: string): Order[] {
-  const orders = loadOrders().filter((o) => o.id !== id);
-  saveOrders(orders);
+export async function loadOrders(): Promise<Order[]> {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (!error && data && data.length > 0) {
+        const orders = data.map(fromDB);
+        saveLocal(orders);
+        return orders;
+      }
+    } catch {}
+  }
+  return loadLocal();
+}
+
+export async function saveOrders(orders: Order[]): Promise<void> {
+  saveLocal(orders);
+  if (!supabase) return;
+  try {
+    const existing = await supabase.from("orders").select("id");
+    const existingIds = new Set((existing.data || []).map((r: any) => r.id));
+    const toInsert = orders.filter((o) => !existingIds.has(o.id));
+    if (toInsert.length > 0) {
+      await supabase.from("orders").insert(toDB(toInsert));
+    }
+    for (const order of orders) {
+      await supabase
+        .from("orders")
+        .update({
+          status: order.status,
+          customer_name: order.customer.name,
+          customer_phone: order.customer.phone,
+          customer_address: order.customer.address,
+        })
+        .eq("id", order.id);
+    }
+  } catch {}
+}
+
+export async function syncOrderToSupabase(order: Order): Promise<void> {
+  if (!supabase) return;
+  try {
+    await supabase.from("orders").insert(toDB([order]));
+  } catch {}
+}
+
+export async function updateOrderStatus(
+  id: string,
+  status: OrderStatus
+): Promise<Order[]> {
+  const orders = loadLocal().map((o) =>
+    o.id === id ? { ...o, status } : o
+  );
+  saveLocal(orders);
+  if (supabase) {
+    try {
+      await supabase.from("orders").update({ status }).eq("id", id);
+    } catch {}
+  }
   return orders;
 }
 
-export function updateOrderStatus(
-  id: string,
-  status: OrderStatus
-): Order[] {
-  const orders = loadOrders().map((o) =>
-    o.id === id ? { ...o, status } : o
-  );
-  saveOrders(orders);
+export async function deleteOrderById(id: string): Promise<Order[]> {
+  const orders = loadLocal().filter((o) => o.id !== id);
+  saveLocal(orders);
+  if (supabase) {
+    try {
+      await supabase.from("orders").delete().eq("id", id);
+    } catch {}
+  }
   return orders;
 }
 

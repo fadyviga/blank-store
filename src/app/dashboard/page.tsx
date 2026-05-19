@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import {
   loadOrders,
-  saveOrders,
+  deleteOrderById,
   updateOrderStatus,
   STATUS_COLORS,
   type Order,
@@ -51,7 +51,9 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (authed) setOrders(loadOrders());
+    if (authed) {
+      loadOrders().then(setOrders);
+    }
   }, [authed]);
 
   const handleLogin = (e: React.FormEvent) => {
@@ -98,14 +100,14 @@ export default function DashboardPage() {
     return { totalOrders: orders.length, totalRevenue: revenue, totalCustomers: customers };
   }, [orders]);
 
-  const handleDelete = (id: string) => {
-    const updated = orders.filter((o) => o.id !== id);
+  const handleDelete = async (id: string) => {
+    const updated = await deleteOrderById(id);
     setOrders(updated);
-    saveOrders(updated);
   };
 
-  const handleStatusChange = (id: string, status: OrderStatus) => {
-    setOrders((prev) => updateOrderStatus(id, status));
+  const handleStatusChange = async (id: string, status: OrderStatus) => {
+    const updated = await updateOrderStatus(id, status);
+    setOrders(updated);
   };
 
   if (checking) {

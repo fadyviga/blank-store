@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ShoppingBag, Loader2, Ruler } from "lucide-react";
 import { useCart } from "../hooks/useCart";
 import { useAuth } from "../context/AuthContext";
-import { createOrder, loadOrders, saveOrders } from "../../lib/order";
+import { createOrder, loadLocal, saveLocal, syncOrderToSupabase } from "../../lib/order";
 import SizeChart from "../components/SizeChart";
 
 interface Errors {
@@ -75,9 +75,10 @@ export default function CheckoutPage() {
         cartTotal
       );
 
-      const orders = loadOrders();
-      orders.push(order);
-      saveOrders(orders);
+      const existing = loadLocal();
+      existing.push(order);
+      saveLocal(existing);
+      syncOrderToSupabase(order);
       clearCart();
 
       await new Promise((r) => setTimeout(r, 600));

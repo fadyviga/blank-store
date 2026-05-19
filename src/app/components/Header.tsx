@@ -1,6 +1,7 @@
 "use client";
 
-import { ShoppingCart, User, LogOut } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { ShoppingCart, User, LogOut, Settings, Package } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCart } from "../hooks/useCart";
 import { useAuth } from "../context/AuthContext";
@@ -9,6 +10,20 @@ export default function Header() {
   const router = useRouter();
   const { cartCount } = useCart();
   const { user, logout, isAuthenticated } = useAuth();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    if (dropdownOpen) {
+      document.addEventListener("mousedown", handleClick);
+    }
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [dropdownOpen]);
 
   return (
     <nav className="fixed top-0 w-full z-50 backdrop-blur-md bg-black/40 border-b border-white/10">
@@ -31,23 +46,43 @@ export default function Header() {
           </a>
 
           {isAuthenticated ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 relative" ref={dropdownRef}>
               <button
-                onClick={() => router.push(user?.role === "admin" ? "/dashboard" : "/account")}
-                className="flex items-center gap-2 text-sm text-zinc-300 hover:text-white transition"
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="flex items-center gap-2 text-sm text-zinc-300 hover:text-white transition cursor-pointer"
               >
                 <User size={16} />
                 <span className="hidden sm:inline text-xs truncate max-w-[100px]">
                   {user?.email}
                 </span>
               </button>
-              <button
-                onClick={logout}
-                className="text-zinc-500 hover:text-white transition"
-                title="Logout"
-              >
-                <LogOut size={16} />
-              </button>
+
+              {dropdownOpen && (
+                <div className="absolute top-full right-0 mt-2 w-52 bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl py-2 animate-scale-in origin-top-right">
+                  <button
+                    onClick={() => { setDropdownOpen(false); router.push("/account"); }}
+                    className="w-full flex items-center gap-3 px-5 py-3 text-sm text-zinc-300 hover:text-white hover:bg-white/5 transition text-left"
+                  >
+                    <Settings size={15} />
+                    Profile Settings
+                  </button>
+                  <button
+                    onClick={() => { setDropdownOpen(false); router.push("/account"); }}
+                    className="w-full flex items-center gap-3 px-5 py-3 text-sm text-zinc-300 hover:text-white hover:bg-white/5 transition text-left"
+                  >
+                    <Package size={15} />
+                    My Orders
+                  </button>
+                  <div className="border-t border-white/10 my-1" />
+                  <button
+                    onClick={() => { setDropdownOpen(false); logout(); }}
+                    className="w-full flex items-center gap-3 px-5 py-3 text-sm text-red-400 hover:bg-white/5 transition text-left"
+                  >
+                    <LogOut size={15} />
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <button

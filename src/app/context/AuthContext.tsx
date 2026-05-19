@@ -13,6 +13,7 @@ interface AuthUser {
   id: string;
   email: string;
   role: "admin" | "user";
+  phone?: string;
 }
 
 interface AuthContextType {
@@ -22,6 +23,8 @@ interface AuthContextType {
   register: (email: string, password: string, rememberMe?: boolean) => Promise<string | null>;
   logout: () => void;
   isAuthenticated: boolean;
+  updateProfile: (data: { name?: string; phone?: string }) => string | null;
+  changePassword: (currentPassword: string, newPassword: string) => string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,6 +38,7 @@ interface StoredUser {
   email: string;
   password: string;
   role: "admin" | "user";
+  phone?: string;
 }
 
 function getUsers(): StoredUser[] {
@@ -63,7 +67,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (raw) {
         const session = JSON.parse(raw);
         if (session && session.email && session.id) {
-          setUser({ id: session.id, email: session.email, role: session.role || "user" });
+          const users = getUsers();
+          const stored = users.find((u) => u.id === session.id);
+          setUser({
+            id: session.id,
+            email: session.email,
+            role: session.role || "user",
+            phone: stored?.phone || session.phone || "",
+          });
         }
       }
     } catch {
@@ -74,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const saveSession = useCallback(
-    (session: { id: string; email: string; role: "admin" | "user" }, rememberMe: boolean) => {
+    (session: { id: string; email: string; role: "admin" | "user"; phone?: string }, rememberMe: boolean) => {
       const raw = JSON.stringify(session);
       if (rememberMe) {
         localStorage.setItem("blank_session", raw);
@@ -96,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!found) return "No account found with this email";
       if (found.password !== password) return "Incorrect password";
 
-      const session = { id: found.id, email: found.email, role: found.role };
+      const session = { id: found.id, email: found.email, role: found.role, phone: found.phone };
       saveSession(session, rememberMe ?? true);
       setUser(session);
       return null;
@@ -139,6 +150,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const updateProfile = useCallback(
+    (data: { name?: string; phone?: string }): string | null => {
+      if (!user) return "Not authenticated";
+      const users = getUsers();
+      const index = users.findIndex((u) => u.id === user.id);
+      if (index === -1) return "User not found";
+      if (data.phone !== undefined) users[index].phone = data.phone;
+      saveUsers(users);
+      setUser((prev) => (prev ? { ...prev, phone: users[index].phone || "" } : prev));
+      return null;
+    },
+    [user]
+  );
+
+  const changePassword = useCallback(
+    (currentPassword: string, newPassword: string): string | null => {
+      if (!user) return "Not authenticated";
+      if (newPassword.length < 4) return "New password must be at least 4 characters";
+      const users = getUsers();
+      const index = users.findIndex((u) => u.id === user.id);
+      if (index === -1) return "User not found";
+      if (users[index].password !== currentPassword) return "Current password is incorrect";
+      users[index].password = newPassword;
+      saveUsers(users);
+      return null;
+    },
+    [user]
+  );
+
   return (
     <AuthContext.Provider
       value={{
@@ -148,6 +188,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         logout,
         isAuthenticated: !!user,
+        updateProfile,
+        changePassword,
       }}
     >
       {children}
