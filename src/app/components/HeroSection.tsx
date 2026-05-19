@@ -22,28 +22,6 @@ export default function HeroSection() {
 
       <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-6 -mt-16">
         <div
-          className={`mb-10 transition-all duration-1000 ease-out ${
-            mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-          }`}
-        >
-          <div className="animate-badge-float">
-            <div className="px-5 py-3 rounded-2xl backdrop-blur-xl bg-white/[0.03] border border-white/[0.08] animate-badge-glow">
-              <div className="flex items-center gap-2.5">
-                <span className="text-base">🔥</span>
-                <div className="text-left">
-                  <p className="text-white text-sm font-bold leading-tight">
-                    Eid Offer &mdash; 10% OFF
-                  </p>
-                  <p className="text-zinc-600 text-[10px] uppercase tracking-[0.2em]">
-                    Limited time
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div
           className={`mb-10 transition-all duration-1200 ease-out delay-200 ${
             mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
           }`}
@@ -58,16 +36,38 @@ export default function HeroSection() {
           />
         </div>
 
-        <h1 className="overflow-hidden mb-8">
+        <div
+          className={`mb-8 transition-all duration-1000 ease-out delay-300 ${
+            mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          }`}
+        >
+          <div className="animate-badge-float">
+            <div className="px-5 py-3 rounded-2xl backdrop-blur-xl bg-white/[0.03] border border-white/[0.08] animate-badge-glow">
+              <div className="flex items-center gap-2.5">
+                <span className="text-base">🔥</span>
+                <div className="text-left">
+                  <p className="text-white text-sm font-bold leading-tight">
+                    Limited Offer &mdash; 10% OFF
+                  </p>
+                  <p className="text-zinc-600 text-[10px] uppercase tracking-[0.2em]">
+                    Eid sale
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h1 className="mb-8 w-full max-w-4xl">
           <span
-            className={`block text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-[0.9] tracking-tight text-white transition-all duration-1000 ease-out delay-400 ${
+            className={`block text-center md:text-left md:pl-[10%] text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.05] tracking-[0.03em] text-white transition-all duration-1000 ease-out delay-400 ${
               mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
             }`}
           >
             LESS EFFORT,
           </span>
           <span
-            className={`block text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-[0.9] tracking-tight text-white transition-all duration-1000 ease-out delay-500 ${
+            className={`block text-center md:text-right md:pr-[10%] text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.05] tracking-[0.03em] text-white transition-all duration-1000 ease-out delay-500 ${
               mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
             }`}
           >

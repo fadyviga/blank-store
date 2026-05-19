@@ -85,21 +85,25 @@ export default function SizeChart({ open, onClose }: Props) {
                 <th className="text-left px-5 py-3.5 text-xs uppercase tracking-[0.2em] text-zinc-400 font-medium w-[15%]">
                   Size
                 </th>
-                <th className="text-center px-2 py-3.5 font-medium">
-                  <div className="flex flex-col items-center gap-0.5">
-                    <Shirt size={14} className="text-zinc-500" />
-                    <ArrowUp size={12} className="text-zinc-500" />
-                    <span className="text-[10px] uppercase tracking-[0.25em] text-zinc-400 mt-0.5">
+                <th className="text-left px-5 py-3.5 font-medium">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs uppercase tracking-[0.2em] text-zinc-400">
                       Length
+                    </span>
+                    <span className="flex items-center gap-1 text-zinc-500/50">
+                      <Shirt size={11} />
+                      <ArrowUp size={9} />
                     </span>
                   </div>
                 </th>
-                <th className="text-center px-2 py-3.5 font-medium">
-                  <div className="flex flex-col items-center gap-0.5">
-                    <Shirt size={14} className="text-zinc-500" />
-                    <ArrowLeftRight size={12} className="text-zinc-500" />
-                    <span className="text-[10px] uppercase tracking-[0.25em] text-zinc-400 mt-0.5">
+                <th className="text-left px-5 py-3.5 font-medium">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs uppercase tracking-[0.2em] text-zinc-400">
                       Width
+                    </span>
+                    <span className="flex items-center gap-1 text-zinc-500/50">
+                      <Shirt size={11} />
+                      <ArrowLeftRight size={9} />
                     </span>
                   </div>
                 </th>
@@ -115,8 +119,8 @@ export default function SizeChart({ open, onClose }: Props) {
                   }}
                 >
                   <td className="px-5 py-4 font-bold text-white">{s.size}</td>
-                  <td className="px-5 py-4 text-zinc-300">{s.length} cm</td>
-                  <td className="px-5 py-4 text-zinc-300">{s.width} cm</td>
+                  <td className="px-5 py-4 text-center text-zinc-300">{s.length} cm</td>
+                  <td className="px-5 py-4 text-center text-zinc-300">{s.width} cm</td>
                 </tr>
               ))}
             </tbody>
