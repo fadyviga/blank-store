@@ -4,11 +4,6 @@ import { useEffect, useState } from "react";
 import ColorCard from "./components/ColorCard";
 
 export default function Home() {
-  const slides = [
-    "/slider/1.jpg",
-    "/slider/2.jpg",
-  ];
-
   const [index, setIndex] = useState(0);
   const slides = [
     "/slider/1.jpg",
