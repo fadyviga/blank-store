@@ -21,7 +21,7 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<string | null>;
-  register: (email: string, password: string, rememberMe?: boolean) => Promise<string | null>;
+  register: (email: string, password: string, phone?: string, rememberMe?: boolean) => Promise<string | null>;
   logout: () => void;
   isAuthenticated: boolean;
   updateProfile: (data: { name?: string; phone?: string }) => string | null;
@@ -119,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const register = useCallback(
-    async (email: string, password: string, rememberMe?: boolean): Promise<string | null> => {
+    async (email: string, password: string, phone?: string, rememberMe?: boolean): Promise<string | null> => {
       const users = getUsers();
       const normalizedEmail = email.toLowerCase().trim();
 
@@ -135,11 +135,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: normalizedEmail,
         password,
         role,
+        phone: phone || "",
       };
 
       saveUsers([...users, newUser]);
 
-      const session = { id: newUser.id, email: newUser.email, role: newUser.role };
+      const session = { id: newUser.id, email: newUser.email, role: newUser.role, phone: newUser.phone };
       saveSession(session, rememberMe ?? true);
       setUser(session);
       return null;

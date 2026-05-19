@@ -100,15 +100,7 @@ export default function HeroSection() {
         </div>
       </div>
 
-      <div
-        className={`absolute bottom-8 left-1/2 -translate-x-1/2 z-10 transition-all duration-1000 delay-1000 ${
-          mounted ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        <div className="flex flex-col items-center gap-2 text-zinc-600">
-          <div className="w-px h-10 bg-gradient-to-b from-zinc-600 to-transparent animate-scroll-bounce" />
-        </div>
-      </div>
+
     </section>
   );
 }

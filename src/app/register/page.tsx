@@ -11,15 +11,36 @@ export default function RegisterPage() {
   const { register } = useAuth();
 
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [phoneError, setPhoneError] = useState("");
+
+  const validatePhone = (val: string): string => {
+    if (!val.trim()) return "Phone number is required";
+    const digits = val.replace(/\D/g, "");
+    if (digits.length < 10 || digits.length > 11) return "Enter a valid Egyptian phone number (e.g. 01012345678)";
+    return "";
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setPhone(val);
+    if (val.trim()) setPhoneError(validatePhone(val));
+    else setPhoneError("");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    const phoneErr = validatePhone(phone);
+    setPhoneError(phoneErr);
+    if (phoneErr) return;
 
     if (!email.trim() || !password.trim() || !confirm.trim()) {
       setError("Please fill in all fields");
@@ -37,7 +58,7 @@ export default function RegisterPage() {
     }
 
     setLoading(true);
-    const err = await register(email, password, rememberMe);
+    const err = await register(email, password, phone, rememberMe);
     setLoading(false);
 
     if (err) {
@@ -69,6 +90,21 @@ export default function RegisterPage() {
             onChange={(e) => setEmail(e.target.value)}
             className="w-full bg-zinc-900 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-white/30 transition"
           />
+
+          <div>
+            <input
+              type="tel"
+              placeholder="Phone number (e.g. 01012345678)"
+              value={phone}
+              onChange={handlePhoneChange}
+              className={`w-full bg-zinc-900 border rounded-xl px-5 py-4 outline-none transition ${
+                phoneError ? "border-red-500" : "border-white/10 focus:border-white/30"
+              }`}
+            />
+            {phoneError && (
+              <p className="text-red-400 text-xs mt-1.5">{phoneError}</p>
+            )}
+          </div>
 
           <input
             type="password"

@@ -146,20 +146,29 @@ export function saveLocal(orders: Order[]): void {
 }
 
 export async function loadOrders(): Promise<Order[]> {
+  const local = loadLocal();
+
   if (supabase) {
     try {
       const { data, error } = await supabase
         .from("orders")
         .select("*")
         .order("created_at", { ascending: false });
-      if (!error && data && data.length > 0) {
-        const orders = data.map(fromDB);
-        saveLocal(orders);
-        return orders;
+
+      if (!error && data) {
+        const remote = data.map(fromDB);
+        const remoteIds = new Set(remote.map((o) => o.id));
+        const localOnly = local.filter((o) => !remoteIds.has(o.id));
+        const merged = [...remote, ...localOnly];
+        saveLocal(merged);
+        return merged;
       }
-    } catch {}
+    } catch {
+      // supabase fetch failed, fall through to local
+    }
   }
-  return loadLocal();
+
+  return local;
 }
 
 export async function saveOrders(orders: Order[]): Promise<void> {
