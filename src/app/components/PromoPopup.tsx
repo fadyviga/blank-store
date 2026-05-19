@@ -5,7 +5,11 @@ import { X } from "lucide-react";
 
 const STORAGE_KEY = "blank_popup_seen";
 
-export default function PromoPopup() {
+interface Props {
+  onVisibleChange?: (visible: boolean) => void;
+}
+
+export default function PromoPopup({ onVisibleChange }: Props) {
   const [show, setShow] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -18,6 +22,10 @@ export default function PromoPopup() {
       setShow(true);
     }
   }, []);
+
+  useEffect(() => {
+    onVisibleChange?.(show);
+  }, [show, onVisibleChange]);
 
   const handleClose = () => {
     setShow(false);
@@ -40,7 +48,7 @@ export default function PromoPopup() {
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.65)" }}
+      style={{ backgroundColor: "rgba(0,0,0,0.75)" }}
     >
       <div
         className="absolute inset-0 backdrop-blur-md"
@@ -57,14 +65,20 @@ export default function PromoPopup() {
         </button>
 
         <div className="text-center">
-          <p className="text-5xl mb-4">🎉</p>
+          <div className="mb-5 inline-flex items-center gap-2 bg-white text-black px-4 py-1.5 rounded-full text-xs font-bold">
+            🔥 Limited Offer — 10% OFF
+          </div>
 
-          <h2 className="text-2xl md:text-3xl font-black mb-2">
-            Eid Offer
+          <p className="uppercase tracking-[0.3em] text-xs text-zinc-500 mb-3">
+            2026 STREETWEAR
+          </p>
+
+          <h2 className="text-4xl md:text-5xl font-black leading-none mb-4">
+            BLANK EG
           </h2>
 
           <p className="text-zinc-400 text-sm md:text-base mb-8 leading-relaxed">
-            Get 10% OFF your order today
+            Premium oversized essentials designed for the next generation.
           </p>
 
           <button
