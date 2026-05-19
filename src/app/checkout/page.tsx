@@ -15,7 +15,7 @@ interface Errors {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -67,6 +67,7 @@ export default function CheckoutPage() {
           name: name.trim(),
           phone: phone.trim(),
           address: address.trim(),
+          email: user?.email || "",
         },
         cart,
         cartTotal
@@ -90,6 +91,9 @@ export default function CheckoutPage() {
         ? "border-red-500"
         : "border-white/10 focus:border-white/30"
     }`;
+
+  const delivery = cartTotal >= 1000 ? 0 : 50;
+  const total = cartTotal + delivery;
 
   const itemCount = Array.isArray(cart)
     ? cart.reduce((sum, item) => sum + (item.quantity || 0), 0)
@@ -270,11 +274,13 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex justify-between text-sm text-zinc-400">
                     <span>Delivery</span>
-                    <span className="text-green-400">Free</span>
+                    <span className={delivery === 0 ? "text-green-400" : "text-zinc-300"}>
+                      {delivery === 0 ? "Free" : `${delivery} EGP`}
+                    </span>
                   </div>
                   <div className="flex justify-between text-lg font-bold pt-2 border-t border-white/10">
                     <span>Total</span>
-                    <span>{cartTotal} EGP</span>
+                    <span>{total} EGP</span>
                   </div>
                 </div>
               </div>

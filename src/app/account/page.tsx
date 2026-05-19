@@ -13,11 +13,15 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push("/login");
+      router.replace("/login");
       return;
     }
-    if (user) {
-      setOrders(loadOrders().filter((o) => o.customer.phone));
+    if (user?.email) {
+      const allOrders = loadOrders();
+      const myOrders = allOrders.filter(
+        (o) => o.customer?.email?.toLowerCase() === user.email.toLowerCase()
+      );
+      setOrders(myOrders);
     }
   }, [user, loading, router]);
 

@@ -5,44 +5,19 @@ import ColorCard from "./components/ColorCard";
 
 export default function Home() {
   const [index, setIndex] = useState(0);
-  const [imagesReady, setImagesReady] = useState(false);
 
   const slides = [
     "/slider/1.jpg",
     "/slider/2.jpg",
   ];
 
-  // PRELOAD IMAGES
   useEffect(() => {
-    if (!slides.length) return;
-
-    let loaded = 0;
-
-    slides.forEach((src) => {
-      const img = new Image();
-
-      img.onload = img.onerror = () => {
-        loaded++;
-
-        if (loaded === slides.length) {
-          setImagesReady(true);
-        }
-      };
-
-      img.src = src;
-    });
-  }, [slides]);
-
-  // SLIDER LOOP
-  useEffect(() => {
-    if (!imagesReady || slides.length <= 1) return;
-
+    if (slides.length <= 1) return;
     const interval = setInterval(() => {
       setIndex((prev) => (prev + 1) % slides.length);
     }, 3000);
-
     return () => clearInterval(interval);
-  }, [imagesReady, slides.length]);
+  }, [slides.length]);
 
   const safeIndex = slides.length ? index % slides.length : 0;
 
@@ -65,22 +40,17 @@ export default function Home() {
       <section className="h-screen flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
 
         {/* BACKGROUND SLIDER */}
-        <div className="absolute inset-0 -z-10 bg-black">
-          
+        <div className="absolute inset-0 -z-10">
           {slides.map((src, i) => (
             <img
               key={src}
               src={src}
               className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${
-                imagesReady && i === safeIndex
-                  ? "opacity-100"
-                  : "opacity-0"
+                i === safeIndex ? "opacity-100" : "opacity-0"
               }`}
               alt="hero slide"
             />
           ))}
-
-          {/* overlay only (no black flash fallback) */}
           <div className="absolute inset-0 bg-black/50" />
         </div>
 

@@ -9,6 +9,7 @@ export interface OrderCustomer {
   name: string;
   phone: string;
   address: string;
+  email?: string;
 }
 
 export interface OrderItem {
@@ -51,14 +52,15 @@ export function createOrder(
   items: OrderItem[],
   subtotal: number
 ): Order {
+  const delivery = subtotal >= 1000 ? 0 : 50;
   return {
     id: crypto.randomUUID(),
     displayId: generateDisplayId(),
     customer,
     items,
     subtotal,
-    delivery: 0,
-    total: subtotal,
+    delivery,
+    total: subtotal + delivery,
     status: "pending",
     createdAt: new Date().toISOString(),
   };
@@ -78,6 +80,7 @@ export function normalizeOrder(raw: any): Order {
       name: raw.name || "",
       phone: raw.phone || "",
       address: raw.address || "",
+      email: "",
     },
     items: raw.items || [],
     subtotal: raw.total || 0,
