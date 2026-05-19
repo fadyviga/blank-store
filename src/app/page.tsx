@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import ColorCard from "./components/ColorCard";
 import PromoPopup from "./components/PromoPopup";
-import HeroSlider from "./components/HeroSlider";
+import HeroSection from "./components/HeroSection";
 
 export default function Home() {
   const [popupActive, setPopupActive] = useState(false);
@@ -19,7 +19,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen text-white">
-      <HeroSlider />
+      <HeroSection />
 
       <section id="products" className="py-24 px-6 border-t border-white/10 bg-black">
         <div className="max-w-6xl mx-auto">
