@@ -63,6 +63,12 @@ export default function Home() {
             <button className="bg-white text-black px-5 py-2 rounded-full text-sm font-medium hover:scale-105 transition">
               Shop Now
             </button>
+            <button
+  onClick={() => router.push("/cart")}
+  className="text-sm text-zinc-300 hover:text-white transition"
+>
+  Cart
+</button>
 
           </div>
         </div>

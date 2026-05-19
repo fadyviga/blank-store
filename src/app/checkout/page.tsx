@@ -1,130 +1,78 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
 export default function CheckoutPage() {
+  const router = useRouter();
+
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
 
-  const placeOrder = async () => {
-    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+  const handleSubmit = (e: any) => {
+    e.preventDefault();
 
-    if (cart.length === 0) {
-      alert("Cart is empty 🛒");
-      return;
-    }
+    if (!name || !phone) return;
 
-    if (!name || !phone || !address) {
-      alert("Please fill all fields");
-      return;
-    }
+    const stored = localStorage.getItem("orders");
+    const orders = stored ? JSON.parse(stored) : [];
 
-    const total = cart.reduce(
-      (sum: number, i: any) => sum + i.price,
-      0
-    );
-
-    // 🧠 1. Save to Supabase
-    const { error } = await supabase.from("orders").insert({
+    orders.push({
+      id: Date.now(),
       name,
       phone,
-      address,
-      items: cart,
-      total,
+      date: new Date().toLocaleString(),
     });
 
-    if (error) {
-      console.log(error);
-      alert("Error placing order ❌");
-      return;
-    }
+    localStorage.setItem("orders", JSON.stringify(orders));
 
-    // 📊 2. Send to Google Sheets (Excel)
-    try {
-      await fetch(
-        "https://script.google.com/macros/s/AKfycbwd34_84XsoWoak1fjPTtaZO7lu51XtL3cm2YO6Hqw0udwBsn3Hv5NiA_8p2rtqNytOKA/exec",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            name,
-            phone,
-            address,
-            items: cart.map((i: any) => `${i.name} (${i.color}/${i.size})`).join(", "),
-            total,
-          }),
-        }
-      );
-    } catch (err) {
-      console.log("Sheet error:", err);
-    }
-
-    // 📲 3. WhatsApp message
-    const message = `
-🛒 New Order
-
-👤 Name: ${name}
-📞 Phone: ${phone}
-🏠 Address: ${address}
-
-📦 Items:
-${cart
-  .map((i: any) => `- ${i.name} (${i.color}/${i.size})`)
-  .join("\n")}
-
-💰 Total: ${total} EGP
-`;
-
-    window.open(
-      `https://wa.me/201287659463?text=${encodeURIComponent(message)}`,
-      "_blank"
-    );
-
-    // 🧹 4. Clear cart
     localStorage.removeItem("cart");
 
-    alert("Order placed successfully ✅");
-
-    window.location.href = "/";
+    router.push("/thanks");
   };
 
   return (
-    <main className="min-h-screen bg-black text-white p-10">
+    <main className="min-h-screen bg-black text-white flex items-center justify-center p-6">
 
-      <h1 className="text-3xl mb-6">Checkout (Cash on Delivery)</h1>
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-md bg-zinc-900 p-8 rounded-3xl border border-white/10"
+      >
 
-      <div className="max-w-md space-y-4">
+        <h1 className="text-3xl font-bold mb-8 text-center">
+          Checkout
+        </h1>
 
-        <input
-          placeholder="Full Name"
-          className="w-full p-3 bg-black border border-white/20 rounded"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+        <div className="space-y-5">
 
-        <input
-          placeholder="Phone Number"
-          className="w-full p-3 bg-black border border-white/20 rounded"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-        />
+          <input
+            type="text"
+            placeholder="Your Name"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full bg-black border border-white/10 rounded-xl px-5 py-4 outline-none"
+          />
 
-        <textarea
-          placeholder="Full Address"
-          className="w-full p-3 bg-black border border-white/20 rounded"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-        />
+          <input
+            type="tel"
+            placeholder="Phone Number"
+            required
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="w-full bg-black border border-white/10 rounded-xl px-5 py-4 outline-none"
+          />
 
-        <button
-          onClick={placeOrder}
-          className="w-full bg-white text-black py-3 rounded-full font-semibold hover:scale-105 transition"
-        >
-          Place Order (COD)
-        </button>
+          <button
+            type="submit"
+            className="w-full bg-white text-black py-4 rounded-xl font-bold hover:scale-[1.02] transition"
+          >
+            Place Order
+          </button>
 
-      </div>
+        </div>
+
+      </form>
 
     </main>
   );

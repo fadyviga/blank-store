@@ -1,69 +1,80 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function CartPage() {
   const [cart, setCart] = useState<any[]>([]);
+  const router = useRouter();
 
   useEffect(() => {
     const stored = localStorage.getItem("cart");
-    if (stored) setCart(JSON.parse(stored));
+
+    if (stored) {
+      setCart(JSON.parse(stored));
+    }
   }, []);
 
-  const removeItem = (id: string) => {
-    const updated = cart.filter((i) => i.id !== id);
-    setCart(updated);
-    localStorage.setItem("cart", JSON.stringify(updated));
-  };
-
-  const total = cart.reduce((sum, item) => sum + item.price, 0);
+  const total = cart.reduce(
+    (sum, item) => sum + item.price,
+    0
+  );
 
   return (
     <main className="min-h-screen bg-black text-white p-10">
 
-      <h1 className="text-3xl mb-6">Cart</h1>
+      <h1 className="text-4xl font-bold mb-10">
+        Your Cart
+      </h1>
 
       {cart.length === 0 ? (
-        <p className="text-zinc-400">Your cart is empty 🛒</p>
+        <p className="text-zinc-400">
+          Cart is empty
+        </p>
       ) : (
         <>
-          {cart.map((item) => (
-            <div
-              key={item.id}
-              className="flex justify-between items-center border border-white/10 p-4 mb-3 rounded-xl"
-            >
-              <div className="flex gap-4 items-center">
-                <img src={item.image} className="w-16 h-16 rounded-lg" />
+          <div className="space-y-4 mb-10">
 
+            {cart.map((item, index) => (
+              <div
+                key={index}
+                className="border border-white/10 rounded-2xl p-5 flex justify-between"
+              >
                 <div>
-                  <p>{item.name}</p>
+                  <h2 className="font-bold text-xl">
+                    {item.name}
+                  </h2>
+
                   <p className="text-zinc-400">
                     {item.color} / {item.size}
                   </p>
                 </div>
+
+                <p className="font-bold">
+                  {item.price} EGP
+                </p>
               </div>
+            ))}
 
-              <button
-                onClick={() => removeItem(item.id)}
-                className="text-red-400"
-              >
-                Remove
-              </button>
-            </div>
-          ))}
-
-          <div className="mt-6 text-xl">
-            Total: {total} EGP
           </div>
 
-         <a
-  href="/checkout"
-  className="mt-4 inline-block bg-white text-black px-6 py-3 rounded-full"
->
-  Checkout (COD)
-</a>
+          <div className="flex justify-between items-center">
+
+            <h2 className="text-2xl font-bold">
+              Total: {total} EGP
+            </h2>
+
+            <button
+              onClick={() => router.push("/checkout")}
+              className="bg-white text-black px-8 py-4 rounded-full font-semibold"
+            >
+              Checkout
+            </button>
+
+          </div>
         </>
       )}
+
     </main>
   );
 }
