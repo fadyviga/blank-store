@@ -5,33 +5,46 @@ import ColorCard from "./components/ColorCard";
 
 export default function Home() {
   const [index, setIndex] = useState(0);
+  const [imagesReady, setImagesReady] = useState(false);
+
   const slides = [
     "/slider/1.jpg",
     "/slider/2.jpg",
   ];
 
+  // PRELOAD IMAGES
   useEffect(() => {
-    if (slides.length === 0) return;
-    let count = 0;
+    if (!slides.length) return;
+
+    let loaded = 0;
+
     slides.forEach((src) => {
       const img = new Image();
+
       img.onload = img.onerror = () => {
-        count++;
-        if (count === slides.length) setImagesReady(true);
+        loaded++;
+
+        if (loaded === slides.length) {
+          setImagesReady(true);
+        }
       };
+
       img.src = src;
     });
-  }, []);
+  }, [slides]);
 
+  // SLIDER LOOP
   useEffect(() => {
-    if (!imagesReady || slides.length === 0) return;
+    if (!imagesReady || slides.length <= 1) return;
+
     const interval = setInterval(() => {
       setIndex((prev) => (prev + 1) % slides.length);
     }, 3000);
-    return () => clearInterval(interval);
-  }, [imagesReady]);
 
-  const safeIndex = slides.length > 0 ? index % slides.length : 0;
+    return () => clearInterval(interval);
+  }, [imagesReady, slides.length]);
+
+  const safeIndex = slides.length ? index % slides.length : 0;
 
   const colors = [
     "Black",
@@ -51,22 +64,27 @@ export default function Home() {
       {/* HERO */}
       <section className="h-screen flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
 
-        {/* Background — crossfade slider */}
-        <div className="absolute inset-0 -z-10">
+        {/* BACKGROUND SLIDER */}
+        <div className="absolute inset-0 -z-10 bg-black">
+          
           {slides.map((src, i) => (
             <img
               key={src}
               src={src}
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-600 ${
-                imagesReady && i === safeIndex ? "opacity-100" : "opacity-0"
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${
+                imagesReady && i === safeIndex
+                  ? "opacity-100"
+                  : "opacity-0"
               }`}
+              alt="hero slide"
             />
           ))}
-          {!imagesReady && <div className="absolute inset-0 bg-zinc-900" />}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/50" />
+
+          {/* overlay only (no black flash fallback) */}
+          <div className="absolute inset-0 bg-black/50" />
         </div>
 
-        {/* Offer */}
+        {/* OFFER */}
         <div className="mb-6 inline-flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full text-sm font-bold shadow-xl">
           🔥 Limited Offer — 10% OFF
         </div>
