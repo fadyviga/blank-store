@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Minus, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 export default function CartPage() {
   const [cart, setCart] = useState<any[]>([]);
   const router = useRouter();
+  
 
   useEffect(() => {
     const stored = localStorage.getItem("cart");
@@ -44,7 +46,13 @@ export default function CartPage() {
     const newCart = cart.filter((_, i) => i !== index);
     updateCart(newCart);
   };
-
+ <button
+  onClick={() => router.push("/")}
+  className="flex items-center gap-2 text-zinc-400 hover:text-white transition mb-8"
+>
+  <ArrowLeft size={18} />
+  Continue Shopping
+</button>
   const total = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0

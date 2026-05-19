@@ -1,17 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Check } from "lucide-react";
 import { useCart } from "../hooks/useCart";
 
 const PRICE = 395;
 
 export default function ColorCard({ color }: { color: string }) {
   const [size, setSize] = useState("M");
+  const [added, setAdded] = useState(false);
 
   const { addToCart } = useCart();
-  const router = useRouter();
 
   const image = `/colors/${color.toLowerCase()}.jpeg`;
 
@@ -26,8 +25,12 @@ export default function ColorCard({ color }: { color: string }) {
       quantity: 1,
     });
 
-    // يوديه مباشرة للـ cart
-    router.push("/cart");
+    // تغيير الزر لمدة 3 ثواني
+    setAdded(true);
+
+    setTimeout(() => {
+      setAdded(false);
+    }, 3000);
   };
 
   return (
@@ -71,13 +74,28 @@ export default function ColorCard({ color }: { color: string }) {
         {PRICE} EGP
       </p>
 
-      {/* Add to Cart */}
+      {/* Add To Cart */}
       <button
         onClick={handleAddToCart}
-        className="w-full bg-white text-black py-3 rounded-full font-semibold flex items-center justify-center gap-2 hover:scale-[1.02] transition"
+        className={`w-full py-3 rounded-full font-semibold flex items-center justify-center gap-2 transition ${
+          added
+            ? "bg-green-500 text-white"
+            : "bg-white text-black hover:scale-[1.02]"
+        }`}
       >
-        <ShoppingCart size={18} />
-        Add to Cart
+
+        {added ? (
+          <>
+            <Check size={18} />
+            Added Successfully
+          </>
+        ) : (
+          <>
+            <ShoppingCart size={18} />
+            Add to Cart
+          </>
+        )}
+
       </button>
 
     </div>
