@@ -42,11 +42,13 @@ npm run build
 - **Statuses:** `pending → confirmed → processing → completed | cancelled`
 - **Dashboard:** status filter, newest/oldest sort, inline status update, delete
 
-## Slider (home page)
-- **Crossfade:** all `<img>` elements mounted simultaneously; only active slide is `opacity-100`
-- **Preload:** all images preloaded in `useEffect` before slider starts
-- **Prevention:** no blank/black frames — fallback black background until `imagesReady`
-- **Transition:** 600ms CSS opacity transition
+## Slider (home page) — Premium HeroSlider
+- **Component:** `components/HeroSlider.tsx` (single source of truth)
+- **Crossfade:** Next.js `<Image>` components with z-index layering; previous slide fades out (`animate-fade-out`) while active slide zooms (`animate-zoom`)
+- **Auto-rotate:** 4500ms interval with `setInterval` + ref tracking
+- **Dot nav:** bottom-center dots with `animate-dot-pulse` on active slide; clickable for manual navigation
+- **Gradient overlay:** `from-black/80 via-black/30 to-black/10` over images
+- **CTA:** "Shop Now" button scrolls to `#products` section
 - **Files:** `public/slider/{1,2}.jpg` (exactly 2 images)
 
 ## Toast system
