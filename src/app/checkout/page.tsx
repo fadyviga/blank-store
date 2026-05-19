@@ -60,22 +60,38 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    await placeOrder();
+  };
+
+  const placeOrder = async () => {
+    console.log("PLACE ORDER CLICKED");
     setSubmitError("");
 
     setTouched({ name: true, phone: true, address: true });
     const newErrors = validate();
     setErrors(newErrors);
 
-    if (Object.keys(newErrors).length > 0) return;
+    if (Object.keys(newErrors).length > 0) {
+      console.log("BLOCKED by validation:", newErrors);
+      return;
+    }
 
     if (!Array.isArray(cart) || cart.length === 0) {
+      console.log("BLOCKED: cart is empty or not an array", cart);
       setSubmitError("Your cart is empty");
+      return;
+    }
+
+    if (!user) {
+      console.log("BLOCKED: no user");
+      setSubmitError("Please log in before placing an order");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
+      console.log("STEP 1 - createOrder");
       const order = createOrder(
         {
           name: name.trim(),
@@ -87,19 +103,26 @@ export default function CheckoutPage() {
         cartTotal,
         user?.id
       );
+      console.log("order created:", order.displayId);
 
+      console.log("STEP 2 - saveOrder");
       const err = await saveOrder(order);
       if (err) {
+        console.log("saveOrder failed:", err);
         setSubmitError(err);
         setIsSubmitting(false);
         return;
       }
+      console.log("saveOrder succeeded");
 
+      console.log("STEP 3 - clearCart");
       clearCart();
 
+      console.log("STEP 4 - redirect");
       await new Promise((r) => setTimeout(r, 600));
       router.push(`/thanks?id=${order.displayId}`);
     } catch (ex) {
+      console.log("CATCH block hit:", ex);
       setSubmitError("Something went wrong. Please try again.");
       setIsSubmitting(false);
     }
@@ -232,7 +255,8 @@ export default function CheckoutPage() {
                 )}
 
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={placeOrder}
                   disabled={isSubmitting}
                   className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition ${
                     isSubmitting
