@@ -6,8 +6,10 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
+import { useAuth } from "./AuthContext";
 
 export interface CartItem {
   id: string;
@@ -31,30 +33,56 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+function getKey(email?: string | null): string {
+  return email ? `cart_${email}` : "cart_guest";
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { user, loading: authLoading } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const prevEmailRef = useRef<string | null | undefined>(undefined);
+  const cartRef = useRef(cart);
+  cartRef.current = cart;
+  const emailRef = useRef<string | null>(null);
+  emailRef.current = user?.email ?? null;
 
   useEffect(() => {
+    if (authLoading) return;
+
+    const prevEmail = prevEmailRef.current;
+    const currentEmail = user?.email ?? null;
+    prevEmailRef.current = currentEmail;
+
+    const prevKey = getKey(prevEmail);
+    const currentKey = getKey(currentEmail);
+
+    if (prevEmail !== undefined && prevKey !== currentKey) {
+      try {
+        localStorage.setItem(prevKey, JSON.stringify(cartRef.current));
+      } catch {}
+    }
+
     try {
-      const stored = localStorage.getItem("cart");
+      const stored = localStorage.getItem(currentKey);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
           setCart(parsed);
+          return;
         }
       }
-    } catch {
-      localStorage.removeItem("cart");
-    }
-    setLoaded(true);
-  }, []);
+    } catch {}
+
+    setCart([]);
+  }, [user?.email, authLoading]);
 
   useEffect(() => {
-    if (loaded) {
-      localStorage.setItem("cart", JSON.stringify(cart));
-    }
-  }, [cart, loaded]);
+    if (prevEmailRef.current === undefined) return;
+    const key = getKey(emailRef.current);
+    try {
+      localStorage.setItem(key, JSON.stringify(cart));
+    } catch {}
+  }, [cart]);
 
   const addToCart = useCallback(
     (item: Omit<CartItem, "quantity"> & { quantity?: number }) => {
