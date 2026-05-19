@@ -33,7 +33,7 @@ export default function Header() {
           {isAuthenticated ? (
             <div className="flex items-center gap-3">
               <button
-                onClick={() => router.push("/dashboard")}
+                onClick={() => router.push(user?.role === "admin" ? "/dashboard" : "/account")}
                 className="flex items-center gap-2 text-sm text-zinc-300 hover:text-white transition"
               >
                 <User size={16} />

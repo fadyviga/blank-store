@@ -10,16 +10,30 @@ export default function Home() {
   ];
 
   const [index, setIndex] = useState(0);
+  const [imagesReady, setImagesReady] = useState(false);
 
   useEffect(() => {
+    if (slides.length === 0) return;
+    let count = 0;
+    slides.forEach((src) => {
+      const img = new Image();
+      img.onload = img.onerror = () => {
+        count++;
+        if (count === slides.length) setImagesReady(true);
+      };
+      img.src = src;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!imagesReady || slides.length === 0) return;
     const interval = setInterval(() => {
       setIndex((prev) => (prev + 1) % slides.length);
     }, 3000);
-
     return () => clearInterval(interval);
-  }, []);
+  }, [imagesReady]);
 
-  const safeIndex = index % slides.length;
+  const safeIndex = slides.length > 0 ? index % slides.length : 0;
 
   const colors = [
     "Black",
@@ -39,13 +53,18 @@ export default function Home() {
       {/* HERO */}
       <section className="h-screen flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
 
-        {/* Background */}
+        {/* Background — crossfade slider */}
         <div className="absolute inset-0 -z-10">
-        <img
-  src={slides[safeIndex]}
-  className="w-full h-full object-cover"
-  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-/>
+          {slides.map((src, i) => (
+            <img
+              key={src}
+              src={src}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-600 ${
+                imagesReady && i === safeIndex ? "opacity-100" : "opacity-0"
+              }`}
+            />
+          ))}
+          {!imagesReady && <div className="absolute inset-0 bg-black" />}
           <div className="absolute inset-0 bg-black/60" />
         </div>
 

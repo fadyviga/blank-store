@@ -9,6 +9,7 @@ import {
   Filter,
   ArrowUpDown,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 import {
   loadOrders,
   saveOrders,
@@ -27,6 +28,7 @@ const STATUS_OPTIONS: OrderStatus[] = [
 ];
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [sortNewest, setSortNewest] = useState(true);
@@ -63,6 +65,22 @@ export default function DashboardPage() {
   const handleStatusChange = (id: string, status: OrderStatus) => {
     setOrders((prev) => updateOrderStatus(id, status));
   };
+
+  if (!user || user.role !== "admin") {
+    return (
+      <main className="min-h-screen bg-black text-white p-6 md:p-10 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <h1 className="text-5xl font-black mb-4">Access Denied</h1>
+          <p className="text-zinc-400 text-lg mb-8">
+            You do not have permission to view this page.
+          </p>
+          <p className="text-zinc-500 text-sm">
+            Please log in with an admin account to access the dashboard.
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-black text-white p-6 md:p-10">

@@ -12,6 +12,7 @@ import {
 interface AuthUser {
   id: string;
   email: string;
+  role: "admin" | "user";
 }
 
 interface AuthContextType {
@@ -33,12 +34,16 @@ interface StoredUser {
   id: string;
   email: string;
   password: string;
+  role: "admin" | "user";
 }
 
 function getUsers(): StoredUser[] {
   try {
     const data = localStorage.getItem("blank_users");
-    return data ? JSON.parse(data) : [];
+    const users = data ? JSON.parse(data) : [];
+    return Array.isArray(users)
+      ? users.map((u: any) => ({ ...u, role: u.role || "user" }))
+      : [];
   } catch {
     return [];
   }
@@ -58,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (raw) {
         const session = JSON.parse(raw);
         if (session && session.email && session.id) {
-          setUser({ id: session.id, email: session.email });
+          setUser({ id: session.id, email: session.email, role: session.role || "user" });
         }
       }
     } catch {
@@ -76,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!found) return "No account found with this email";
       if (found.password !== password) return "Incorrect password";
 
-      const session = { id: found.id, email: found.email };
+      const session = { id: found.id, email: found.email, role: found.role };
       localStorage.setItem("blank_session", JSON.stringify(session));
       setUser(session);
       return null;
@@ -93,15 +98,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return "An account with this email already exists";
       }
 
+      const isFirstUser = users.length === 0;
+      const role = isFirstUser ? "admin" : "user";
+
       const newUser: StoredUser = {
         id: generateId(),
         email: normalizedEmail,
         password,
+        role,
       };
 
       saveUsers([...users, newUser]);
 
-      const session = { id: newUser.id, email: newUser.email };
+      const session = { id: newUser.id, email: newUser.email, role: newUser.role };
       localStorage.setItem("blank_session", JSON.stringify(session));
       setUser(session);
       return null;
