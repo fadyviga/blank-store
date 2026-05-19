@@ -30,6 +30,7 @@ export default function CheckoutPage() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Errors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
 
   useEffect(() => {
@@ -59,6 +60,7 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError("");
 
     setTouched({ name: true, phone: true, address: true });
     const newErrors = validate();
@@ -66,7 +68,10 @@ export default function CheckoutPage() {
 
     if (Object.keys(newErrors).length > 0) return;
 
-    if (!Array.isArray(cart) || cart.length === 0) return;
+    if (!Array.isArray(cart) || cart.length === 0) {
+      setSubmitError("Your cart is empty");
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -85,6 +90,7 @@ export default function CheckoutPage() {
 
       const err = await saveOrder(order);
       if (err) {
+        setSubmitError(err);
         setIsSubmitting(false);
         return;
       }
@@ -93,7 +99,8 @@ export default function CheckoutPage() {
 
       await new Promise((r) => setTimeout(r, 600));
       router.push(`/thanks?id=${order.displayId}`);
-    } catch {
+    } catch (ex) {
+      setSubmitError("Something went wrong. Please try again.");
       setIsSubmitting(false);
     }
   };
@@ -217,6 +224,12 @@ export default function CheckoutPage() {
                   <span>💰</span>
                   <span>Cash on delivery available</span>
                 </div>
+
+                {submitError && (
+                  <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl px-4 py-3 text-center">
+                    {submitError}
+                  </div>
+                )}
 
                 <button
                   type="submit"
