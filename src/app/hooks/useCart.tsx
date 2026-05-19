@@ -8,7 +8,6 @@ export function useCart() {
 
     localStorage.setItem("cart", JSON.stringify(cart));
 
-    alert("Added to cart ✅");
   };
 
   const getCart = () => {

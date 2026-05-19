@@ -62,13 +62,12 @@ export default function Home() {
             </a>
 
             <button
-  onClick={() => router.push("/cart")}
-  className="flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full text-sm font-medium hover:scale-105 transition"
->
-  <ShoppingCart size={18} />
-  Cart
-</button>
-            
+              onClick={() => router.push("/cart")}
+              className="flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full text-sm font-medium hover:scale-105 transition"
+            >
+              <ShoppingCart size={18} />
+              Cart
+            </button>
 
           </div>
         </div>
@@ -96,33 +95,26 @@ export default function Home() {
           Premium oversized essentials designed for the next generation.
         </p>
 
-        <div className="flex gap-4">
+        <div className="flex justify-center">
 
-          {/* 🔥 زر يوديك للمنتجات */}
-          <button
-            onClick={() => router.push("/products")}
-            className="bg-white text-black px-8 py-4 rounded-full font-semibold hover:scale-105 transition"
-          >
-            Explore Collection
-          </button>
-
-          {/* 🔥 زر ينزل للألوان */}
           <button
             onClick={() => {
-              const section = document.getElementById("colors");
-              section?.scrollIntoView({ behavior: "smooth" });
+              document
+                .getElementById("products")
+                ?.scrollIntoView({ behavior: "smooth" });
             }}
-            className="border border-white/20 px-8 py-4 rounded-full hover:bg-white hover:text-black transition"
+            className="bg-white text-black px-10 py-4 rounded-full font-semibold text-lg hover:scale-105 transition shadow-2xl"
           >
-            View Colors
+            Shop Now
           </button>
 
         </div>
+
       </section>
 
-      {/* Colors */}
+      {/* Products */}
       <section
-        id="colors"
+        id="products"
         className="py-24 px-6 border-t border-white/10"
       >
         <div className="max-w-6xl mx-auto">
@@ -143,7 +135,8 @@ export default function Home() {
       </section>
 
       {/* About */}
-      <section className="py-32 px-6 border-t border-white/10">
+      <section className="py-24 px-6 border-t border-white/10">
+
         <div className="max-w-4xl mx-auto text-center">
 
           <p className="text-zinc-500 uppercase tracking-[0.3em] mb-4">
@@ -151,7 +144,9 @@ export default function Home() {
           </p>
 
           <h2 className="text-5xl font-bold leading-tight mb-8">
-            Minimal pieces.<br />Maximum presence.
+            Minimal pieces.
+            <br />
+            Maximum presence.
           </h2>
 
           <p className="text-zinc-400 text-lg leading-8">
@@ -160,6 +155,7 @@ export default function Home() {
           </p>
 
         </div>
+
       </section>
 
       {/* Footer */}

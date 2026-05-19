@@ -46,10 +46,10 @@ export default function CartPage() {
     const newCart = cart.filter((_, i) => i !== index);
     updateCart(newCart);
   };
- <button
+    <button
   onClick={() => router.push("/")}
   className="flex items-center gap-2 text-zinc-400 hover:text-white transition mb-8"
->
+  >
   <ArrowLeft size={18} />
   Continue Shopping
 </button>
