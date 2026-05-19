@@ -8,8 +8,6 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { supabase } from "@/lib/supabase";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface AuthUser {
   id: string;
@@ -24,29 +22,41 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<string | null>;
   register: (email: string, password: string, phone?: string) => Promise<string | null>;
-  logout: () => Promise<void>;
+  logout: () => void;
   isAuthenticated: boolean;
-  updateProfile: (data: { name?: string; phone?: string }) => Promise<string | null>;
-  changePassword: (currentPassword: string, newPassword: string) => Promise<string | null>;
+  updateProfile: (data: { name?: string; phone?: string }) => string | null;
+  changePassword: (currentPassword: string, newPassword: string) => string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function toAuthUser(sbUser: SupabaseUser | null, profile?: any): AuthUser | null {
-  if (!sbUser) return null;
-  return {
-    id: sbUser.id,
-    email: sbUser.email || "",
-    role: profile?.role || "user",
-    phone: profile?.phone || "",
-    name: profile?.name || "",
-  };
+function generateId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
-async function fetchProfile(userId: string) {
-  if (!supabase) return null;
-  const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
-  return data;
+interface StoredUser {
+  id: string;
+  email: string;
+  password: string;
+  role: "admin" | "user";
+  phone?: string;
+  name?: string;
+}
+
+function getUsers(): StoredUser[] {
+  try {
+    const data = localStorage.getItem("blank_users");
+    const users = data ? JSON.parse(data) : [];
+    return Array.isArray(users)
+      ? users.map((u: any) => ({ ...u, role: u.role || "user" }))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveUsers(users: StoredUser[]) {
+  localStorage.setItem("blank_users", JSON.stringify(users));
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -54,117 +64,127 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
-
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        const profile = await fetchProfile(session.user.id);
-        setUser(toAuthUser(session.user, profile));
-      }
-      setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (session?.user) {
-          const profile = await fetchProfile(session.user.id);
-          setUser(toAuthUser(session.user, profile));
-        } else {
-          setUser(null);
+    try {
+      const raw = sessionStorage.getItem("blank_session") || localStorage.getItem("blank_session");
+      if (raw) {
+        const session = JSON.parse(raw);
+        if (session && session.email && session.id) {
+          const users = getUsers();
+          const stored = users.find((u) => u.id === session.id);
+          setUser({
+            id: session.id,
+            email: session.email,
+            role: session.role || "user",
+            phone: stored?.phone || session.phone || "",
+            name: stored?.name || session.name || "",
+          });
         }
       }
-    );
-
-    return () => subscription.unsubscribe();
+    } catch {
+      sessionStorage.removeItem("blank_session");
+      localStorage.removeItem("blank_session");
+    }
+    setLoading(false);
   }, []);
+
+  const saveSession = useCallback(
+    (session: { id: string; email: string; role: "admin" | "user"; phone?: string; name?: string }) => {
+      const raw = JSON.stringify(session);
+      localStorage.setItem("blank_session", raw);
+      sessionStorage.setItem("blank_session", raw);
+    },
+    []
+  );
 
   const login = useCallback(
     async (email: string, password: string): Promise<string | null> => {
-      if (!supabase) return "Supabase is not configured";
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.toLowerCase().trim(),
-        password,
-      });
-      if (error) {
-        if (error.message.includes("Invalid login credentials")) {
-          return "Invalid email or password";
-        }
-        return error.message;
-      }
+      const users = getUsers();
+      const found = users.find(
+        (u) => u.email === email.toLowerCase().trim()
+      );
+      if (!found) return "No account found with this email";
+      if (found.password !== password) return "Incorrect password";
+
+      const session = { id: found.id, email: found.email, role: found.role, phone: found.phone, name: found.name };
+      saveSession(session);
+      setUser(session);
       return null;
     },
-    []
+    [saveSession]
   );
 
   const register = useCallback(
     async (email: string, password: string, phone?: string): Promise<string | null> => {
-      if (!supabase) return "Supabase is not configured";
+      const users = getUsers();
+      const normalizedEmail = email.toLowerCase().trim();
 
-      const { data, error } = await supabase.auth.signUp({
-        email: email.toLowerCase().trim(),
+      if (users.find((u) => u.email === normalizedEmail)) {
+        return "An account with this email already exists";
+      }
+
+      const isFirstUser = users.length === 0;
+      const role = isFirstUser ? "admin" : "user";
+
+      const newUser: StoredUser = {
+        id: generateId(),
+        email: normalizedEmail,
         password,
-      });
-
-      if (error) return error.message;
-      if (!data?.user) return "Signup failed. Please try again.";
-
-      const { error: profileErr } = await supabase.from("profiles").upsert({
-        id: data.user.id,
-        email: data.user.email || email.toLowerCase().trim(),
+        role,
         phone: phone || "",
-      });
+      };
 
-      if (profileErr) return profileErr.message;
+      saveUsers([...users, newUser]);
 
-      setUser({
-        id: data.user.id,
-        email: data.user.email || email.toLowerCase().trim(),
-        role: "user",
-        phone: phone || "",
-        name: "",
-      });
-
+      const session = { id: newUser.id, email: newUser.email, role: newUser.role, phone: newUser.phone, name: newUser.name };
+      saveSession(session);
+      setUser(session);
       return null;
     },
-    []
+    [saveSession]
   );
 
-  const logout = useCallback(async () => {
-    if (supabase) await supabase.auth.signOut();
+  const logout = useCallback(() => {
+    localStorage.removeItem("blank_session");
+    sessionStorage.removeItem("blank_session");
     setUser(null);
   }, []);
 
   const updateProfile = useCallback(
-    async (data: { name?: string; phone?: string }): Promise<string | null> => {
-      if (!supabase) return "Supabase is not configured";
+    (data: { name?: string; phone?: string }): string | null => {
       if (!user) return "Not authenticated";
-      const updates: Record<string, string> = {};
-      if (data.name !== undefined) updates.name = data.name;
-      if (data.phone !== undefined) updates.phone = data.phone;
-      if (Object.keys(updates).length === 0) return null;
-      const { error } = await supabase
-        .from("profiles")
-        .update(updates)
-        .eq("id", user.id);
-      if (error) return error.message;
-      setUser((prev) => (prev ? { ...prev, ...updates } : prev));
+      const users = getUsers();
+      const index = users.findIndex((u) => u.id === user.id);
+      if (index === -1) return "User not found";
+      if (data.phone !== undefined) users[index].phone = data.phone;
+      if (data.name !== undefined) users[index].name = data.name;
+      saveUsers(users);
+      setUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              phone: users[index].phone || "",
+              name: users[index].name || "",
+            }
+          : prev
+      );
       return null;
     },
     [user]
   );
 
   const changePassword = useCallback(
-    async (_currentPassword: string, newPassword: string): Promise<string | null> => {
-      if (!supabase) return "Supabase is not configured";
-      if (newPassword.length < 6) return "New password must be at least 6 characters";
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) return error.message;
+    (currentPassword: string, newPassword: string): string | null => {
+      if (!user) return "Not authenticated";
+      if (newPassword.length < 4) return "New password must be at least 4 characters";
+      const users = getUsers();
+      const index = users.findIndex((u) => u.id === user.id);
+      if (index === -1) return "User not found";
+      if (users[index].password !== currentPassword) return "Current password is incorrect";
+      users[index].password = newPassword;
+      saveUsers(users);
       return null;
     },
-    []
+    [user]
   );
 
   return (

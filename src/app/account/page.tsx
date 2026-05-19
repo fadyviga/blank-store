@@ -32,8 +32,8 @@ export default function AccountPage() {
     }
   }, [user, loading, router]);
 
-  const handleProfileSave = async () => {
-    const err = await updateProfile({ name: displayName.trim(), phone: phone.trim() });
+  const handleProfileSave = () => {
+    const err = updateProfile({ name: displayName.trim(), phone: phone.trim() });
     if (err) {
       setProfileMsg({ type: "error", text: err });
     } else {
@@ -42,7 +42,7 @@ export default function AccountPage() {
     setTimeout(() => setProfileMsg(null), 3000);
   };
 
-  const handlePasswordChange = async () => {
+  const handlePasswordChange = () => {
     setPwMsg(null);
     if (!currentPw || !newPw || !confirmPw) {
       setPwMsg({ type: "error", text: "Please fill in all fields" });
@@ -52,11 +52,11 @@ export default function AccountPage() {
       setPwMsg({ type: "error", text: "Passwords do not match" });
       return;
     }
-    if (newPw.length < 6) {
-      setPwMsg({ type: "error", text: "Password must be at least 6 characters" });
+    if (newPw.length < 4) {
+      setPwMsg({ type: "error", text: "Password must be at least 4 characters" });
       return;
     }
-    const err = await changePassword(currentPw, newPw);
+    const err = changePassword(currentPw, newPw);
     if (err) {
       setPwMsg({ type: "error", text: err });
     } else {
