@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import ColorCard from "./components/ColorCard";
+import PromoPopup from "./components/PromoPopup";
 
 export default function Home() {
   const slides = [
@@ -122,6 +123,8 @@ export default function Home() {
       <footer className="border-t border-white/10 py-10 text-center text-zinc-500 bg-black">
         © 2026 BLANK — All Rights Reserved
       </footer>
+
+      <PromoPopup />
     </main>
   );
 }
