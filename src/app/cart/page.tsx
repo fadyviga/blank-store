@@ -107,6 +107,9 @@ export default function CartPage() {
                     <p className="mt-3 font-bold">
                       {item.price} EGP
                     </p>
+                    <p className="text-zinc-500 text-sm">
+  Quantity: {item.quantity}
+</p>
                   </div>
 
                 </div>

@@ -70,10 +70,17 @@ export default function ColorCard({ color }: { color: string }) {
       </div>
 
       {/* Price */}
-      <p className="text-center text-zinc-400 mb-5 text-lg">
-        {PRICE} EGP
-      </p>
+      <div className="text-center mb-5">
 
+  <p className="text-zinc-500 line-through text-sm">
+    450 EGP
+  </p>
+
+  <p className="text-2xl font-bold">
+    395 EGP
+  </p>
+
+</div>
       {/* Add To Cart */}
       <button
         onClick={handleAddToCart}
@@ -97,7 +104,24 @@ export default function ColorCard({ color }: { color: string }) {
         )}
 
       </button>
+        <button
+  onClick={() => {
+    addToCart({
+      id: `${color}-${size}`,
+      name: "Oversized Tee",
+      color,
+      size,
+      price: PRICE,
+      image,
+      quantity: 1,
+    });
 
+    router.push("/checkout");
+  }}
+  className="w-full mt-3 border border-white/20 py-3 rounded-full font-semibold hover:bg-white hover:text-black transition"
+>
+  Buy Now
+</button>
     </div>
   );
 }

@@ -20,7 +20,18 @@ export default function Home() {
     const interval = setInterval(() => {
       setIndex((prev) => (prev + 1) % slides.length);
     }, 3000);
+    const [cartCount, setCartCount] = useState(0);
 
+    useEffect(() => {
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    
+      const total = cart.reduce(
+        (sum: number, item: any) => sum + item.quantity,
+        0
+      );
+    
+      setCartCount(total);
+    }, []);
     return () => clearInterval(interval);
   }, []);
 
@@ -54,7 +65,7 @@ export default function Home() {
           <div className="flex items-center gap-6">
 
             <a
-              href="https://wa.me/201287659463"
+              href="href="https://wa.me/201287659463?text=Hey%20Blank%20EG%20👋%20I%20want%20to%20know%20more%20about%20your%20offers."
               target="_blank"
               className="text-sm text-zinc-300 hover:text-white transition"
             >
@@ -62,12 +73,19 @@ export default function Home() {
             </a>
 
             <button
-              onClick={() => router.push("/cart")}
-              className="flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full text-sm font-medium hover:scale-105 transition"
-            >
-              <ShoppingCart size={18} />
-              Cart
-            </button>
+  onClick={() => router.push("/cart")}
+  className="relative flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full text-sm font-medium hover:scale-105 transition"
+>
+  <ShoppingCart size={18} />
+
+  Cart
+
+  {cartCount > 0 && (
+    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+      {cartCount}
+    </span>
+  )}
+</button>
 
           </div>
         </div>
@@ -82,7 +100,9 @@ export default function Home() {
             className="w-full h-full object-cover opacity-40 transition duration-700"
           />
         </div>
-
+        <div className="mb-6 inline-flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full text-sm font-bold shadow-xl">
+  🔥 Limited Offer — 10% OFF
+</div>
         <p className="uppercase tracking-[0.4em] text-sm text-zinc-400 mb-4">
           2026 STREETWEAR
         </p>

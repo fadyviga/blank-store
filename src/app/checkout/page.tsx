@@ -60,7 +60,12 @@ export default function CheckoutPage() {
 
   return (
     <main className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-
+<button
+  onClick={() => router.push("/cart")}
+  className="absolute top-8 left-8 text-zinc-400 hover:text-white transition"
+>
+  ← Back to Cart
+</button>
       <form
         onSubmit={handleSubmit}
         className="w-full max-w-md bg-zinc-900 p-8 rounded-3xl border border-white/10"

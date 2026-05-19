@@ -2,21 +2,20 @@
 
 export function useCart() {
   const addToCart = (item: any) => {
-    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-
-    cart.push(item);
-
-    localStorage.setItem("cart", JSON.stringify(cart));
-
-  };
-
-  const getCart = () => {
-    return JSON.parse(localStorage.getItem("cart") || "[]");
-  };
-
-  const clearCart = () => {
-    localStorage.removeItem("cart");
-  };
+    const existingItem = cart.find(
+      (i: any) =>
+        i.color === item.color &&
+        i.size === item.size
+    );
+    
+    if (existingItem) {
+      existingItem.quantity += 1;
+    } else {
+      cart.push({
+        ...item,
+        quantity: 1,
+      });
+    }
 
   return { addToCart, getCart, clearCart };
 }
