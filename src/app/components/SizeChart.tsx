@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { X } from "lucide-react";
+import { X, Shirt, ArrowUp, ArrowLeftRight } from "lucide-react";
 
 const SIZES = [
   { size: "M", length: 70, width: 55 },
@@ -82,14 +82,26 @@ export default function SizeChart({ open, onClose }: Props) {
           <table className="w-full">
             <thead>
               <tr className="bg-white/5">
-                <th className="text-left px-5 py-3.5 text-xs uppercase tracking-[0.2em] text-zinc-400 font-medium">
+                <th className="text-left px-5 py-3.5 text-xs uppercase tracking-[0.2em] text-zinc-400 font-medium w-[15%]">
                   Size
                 </th>
-                <th className="text-left px-5 py-3.5 text-xs uppercase tracking-[0.2em] text-zinc-400 font-medium">
-                  Length (الطول)
+                <th className="text-center px-2 py-3.5 font-medium">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <Shirt size={14} className="text-zinc-500" />
+                    <ArrowUp size={12} className="text-zinc-500" />
+                    <span className="text-[10px] uppercase tracking-[0.25em] text-zinc-400 mt-0.5">
+                      Length
+                    </span>
+                  </div>
                 </th>
-                <th className="text-left px-5 py-3.5 text-xs uppercase tracking-[0.2em] text-zinc-400 font-medium">
-                  Width (العرض)
+                <th className="text-center px-2 py-3.5 font-medium">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <Shirt size={14} className="text-zinc-500" />
+                    <ArrowLeftRight size={12} className="text-zinc-500" />
+                    <span className="text-[10px] uppercase tracking-[0.25em] text-zinc-400 mt-0.5">
+                      Width
+                    </span>
+                  </div>
                 </th>
               </tr>
             </thead>
