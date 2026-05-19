@@ -2,15 +2,19 @@
 
 import { useState } from "react";
 import { ShoppingCart, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCart } from "../hooks/useCart";
+import { useToast } from "./Toast";
 
 const PRICE = 395;
 
 export default function ColorCard({ color }: { color: string }) {
+  const router = useRouter();
   const [size, setSize] = useState("M");
   const [added, setAdded] = useState(false);
 
   const { addToCart } = useCart();
+  const { showToast } = useToast();
 
   const image = `/colors/${color.toLowerCase()}.jpeg`;
 
@@ -25,12 +29,12 @@ export default function ColorCard({ color }: { color: string }) {
       quantity: 1,
     });
 
-    // تغيير الزر لمدة 3 ثواني
     setAdded(true);
+    showToast(`${color} added to cart ✓`);
 
     setTimeout(() => {
       setAdded(false);
-    }, 3000);
+    }, 2500);
   };
 
   return (
@@ -94,7 +98,7 @@ export default function ColorCard({ color }: { color: string }) {
         {added ? (
           <>
             <Check size={18} />
-            Added Successfully
+            Added ✓
           </>
         ) : (
           <>

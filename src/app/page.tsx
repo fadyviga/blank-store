@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ColorCard from "./components/ColorCard";
 import { ShoppingCart } from "lucide-react";
+import { useCart } from "./hooks/useCart";
 
 export default function Home() {
   const router = useRouter();
@@ -11,29 +12,21 @@ export default function Home() {
   const slides = [
     "/slider/1.jpg",
     "/slider/2.jpg",
-    "/slider/3.jpg",
   ];
 
   const [index, setIndex] = useState(0);
+  const { cartCount } = useCart();
 
+  // slider loop
   useEffect(() => {
     const interval = setInterval(() => {
       setIndex((prev) => (prev + 1) % slides.length);
     }, 3000);
-    const [cartCount, setCartCount] = useState(0);
 
-    useEffect(() => {
-      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-    
-      const total = cart.reduce(
-        (sum: number, item: any) => sum + item.quantity,
-        0
-      );
-    
-      setCartCount(total);
-    }, []);
     return () => clearInterval(interval);
   }, []);
+
+  const safeIndex = index % slides.length;
 
   const colors = [
     "Black",
@@ -54,18 +47,20 @@ export default function Home() {
       <nav className="fixed top-0 w-full z-50 backdrop-blur-md bg-black/40 border-b border-white/10">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
 
-          <div className="h-10 flex items-center overflow-visible">
-            <img
-              src="/logo.png"
-              alt="Logo"
-              className="h-54 w-auto object-contain scale-110"
-            />
-          </div>
+          {/* Logo */}
+          <div className="h-10 flex items-center">
+  <img
+    src="/logo.png"
+    alt="Logo"
+    className="h-48 w-auto object-contain"
+  />
+</div>
 
+          {/* Actions */}
           <div className="flex items-center gap-6">
 
             <a
-              href="href="https://wa.me/201287659463?text=Hey%20Blank%20EG%20👋%20I%20want%20to%20know%20more%20about%20your%20offers."
+              href="https://wa.me/201287659463?text=Hey%20Blank%20EG%20👋%20I%20want%20to%20know%20more%20about%20your%20offers."
               target="_blank"
               className="text-sm text-zinc-300 hover:text-white transition"
             >
@@ -73,70 +68,71 @@ export default function Home() {
             </a>
 
             <button
-  onClick={() => router.push("/cart")}
-  className="relative flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full text-sm font-medium hover:scale-105 transition"
->
-  <ShoppingCart size={18} />
+              onClick={() => router.push("/cart")}
+              className="relative flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full text-sm font-medium hover:scale-105 transition"
+            >
+              <ShoppingCart size={18} />
+              Cart
 
-  Cart
-
-  {cartCount > 0 && (
-    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-      {cartCount}
-    </span>
-  )}
-</button>
+              {cartCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                  {cartCount}
+                </span>
+              )}
+            </button>
 
           </div>
         </div>
       </nav>
 
-      {/* Hero */}
+      {/* HERO */}
       <section className="h-screen flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
 
+        {/* Background */}
         <div className="absolute inset-0 -z-10">
-          <img
-            src={slides[index]}
-            className="w-full h-full object-cover opacity-40 transition duration-700"
-          />
+        <img
+  src={slides[safeIndex]}
+  className="w-full h-full object-cover"
+/>
+          <div className="absolute inset-0 bg-black/60" />
         </div>
+
+        {/* Offer */}
         <div className="mb-6 inline-flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full text-sm font-bold shadow-xl">
-  🔥 Limited Offer — 10% OFF
-</div>
+          🔥 Limited Offer — 10% OFF
+        </div>
+
         <p className="uppercase tracking-[0.4em] text-sm text-zinc-400 mb-4">
           2026 STREETWEAR
         </p>
 
         <h1 className="text-6xl md:text-8xl font-black leading-none mb-6">
-          BLANK
+          BLANK EG
         </h1>
 
         <p className="max-w-xl text-zinc-400 text-lg mb-8">
           Premium oversized essentials designed for the next generation.
         </p>
 
+        {/* CTA */}
         <div className="flex justify-center">
-
           <button
-            onClick={() => {
+            onClick={() =>
               document
                 .getElementById("products")
-                ?.scrollIntoView({ behavior: "smooth" });
-            }}
+                ?.scrollIntoView({ behavior: "smooth" })
+            }
             className="bg-white text-black px-10 py-4 rounded-full font-semibold text-lg hover:scale-105 transition shadow-2xl"
           >
             Shop Now
           </button>
-
         </div>
 
       </section>
 
-      {/* Products */}
-      <section
-        id="products"
-        className="py-24 px-6 border-t border-white/10"
-      >
+      {/* PRODUCTS */}
+      <section id="products" className="py-24 px-6 border-t border-white/10">
+
         <div className="max-w-6xl mx-auto">
 
           <h2 className="text-4xl font-bold mb-12 text-center">
@@ -144,17 +140,16 @@ export default function Home() {
           </h2>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-
             {colors.map((color) => (
               <ColorCard key={color} color={color} />
             ))}
-
           </div>
 
         </div>
+
       </section>
 
-      {/* About */}
+      {/* ABOUT */}
       <section className="py-24 px-6 border-t border-white/10">
 
         <div className="max-w-4xl mx-auto text-center">
@@ -164,9 +159,7 @@ export default function Home() {
           </p>
 
           <h2 className="text-5xl font-bold leading-tight mb-8">
-            Minimal pieces.
-            <br />
-            Maximum presence.
+            Less effort.<br />More style.
           </h2>
 
           <p className="text-zinc-400 text-lg leading-8">
@@ -178,7 +171,7 @@ export default function Home() {
 
       </section>
 
-      {/* Footer */}
+      {/* FOOTER */}
       <footer className="border-t border-white/10 py-10 text-center text-zinc-500">
         © 2026 BLANK — All Rights Reserved
       </footer>

@@ -1,62 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { ArrowLeft } from "lucide-react";
+import { useCart } from "../hooks/useCart";
+import { useToast } from "../components/Toast";
 
 export default function CartPage() {
-  const [cart, setCart] = useState<any[]>([]);
   const router = useRouter();
-  
+  const { cart, removeFromCart, updateQuantity, cartTotal } = useCart();
+  const { showToast } = useToast();
+  const [bumpIndex, setBumpIndex] = useState<number | null>(null);
 
-  useEffect(() => {
-    const stored = localStorage.getItem("cart");
-
-    if (stored) {
-      setCart(JSON.parse(stored));
-    }
-  }, []);
-
-  // تحديث localStorage
-  const updateCart = (newCart: any[]) => {
-    setCart(newCart);
-    localStorage.setItem("cart", JSON.stringify(newCart));
-  };
-
-  // زيادة
   const increaseQty = (index: number) => {
-    const newCart = [...cart];
-    newCart[index].quantity += 1;
-    updateCart(newCart);
+    updateQuantity(index, cart[index].quantity + 1);
+    setBumpIndex(index);
+    setTimeout(() => setBumpIndex(null), 200);
   };
 
-  // تقليل
   const decreaseQty = (index: number) => {
-    const newCart = [...cart];
-
-    if (newCart[index].quantity > 1) {
-      newCart[index].quantity -= 1;
-      updateCart(newCart);
-    }
+    updateQuantity(index, cart[index].quantity - 1);
+    setBumpIndex(index);
+    setTimeout(() => setBumpIndex(null), 200);
   };
 
-  // حذف
   const removeItem = (index: number) => {
-    const newCart = cart.filter((_, i) => i !== index);
-    updateCart(newCart);
+    const item = cart[index];
+    removeFromCart(index);
+    showToast(`${item.name} removed from cart`, "info");
   };
-    <button
-  onClick={() => router.push("/")}
-  className="flex items-center gap-2 text-zinc-400 hover:text-white transition mb-8"
-  >
-  <ArrowLeft size={18} />
-  Continue Shopping
-</button>
-  const total = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
 
   return (
     <main className="min-h-screen bg-black text-white p-6 md:p-10">
@@ -120,20 +93,29 @@ export default function CartPage() {
                   {/* ناقص */}
                   <button
                     onClick={() => decreaseQty(index)}
-                    className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center"
+                    disabled={item.quantity <= 1}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center transition ${
+                      item.quantity <= 1
+                        ? "bg-zinc-800 text-zinc-600 cursor-not-allowed"
+                        : "bg-zinc-900 hover:bg-zinc-700 cursor-pointer"
+                    }`}
                   >
                     <Minus size={16} />
                   </button>
 
                   {/* الكمية */}
-                  <span className="text-xl font-bold">
+                  <span
+                    className={`text-xl font-bold transition-all duration-150 ${
+                      bumpIndex === index ? "animate-bump" : ""
+                    }`}
+                  >
                     {item.quantity}
                   </span>
 
                   {/* زائد */}
                   <button
                     onClick={() => increaseQty(index)}
-                    className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center"
+                    className="w-10 h-10 rounded-full bg-zinc-900 hover:bg-zinc-700 flex items-center justify-center transition cursor-pointer"
                   >
                     <Plus size={16} />
                   </button>
@@ -157,7 +139,7 @@ export default function CartPage() {
           <div className="flex flex-col md:flex-row gap-5 justify-between items-center border-t border-white/10 pt-6">
 
             <h2 className="text-3xl font-bold">
-              Total: {total} EGP
+              Total: {cartTotal} EGP
             </h2>
 
             <button

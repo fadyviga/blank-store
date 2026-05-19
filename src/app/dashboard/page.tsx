@@ -7,9 +7,10 @@ import {
   Users,
   Trash2,
 } from "lucide-react";
+import { loadOrders, saveOrders, type Order } from "../../lib/order";
 
 export default function DashboardPage() {
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
 
   const [stats, setStats] = useState({
     totalOrders: 0,
@@ -17,56 +18,34 @@ export default function DashboardPage() {
     totalCustomers: 0,
   });
 
-  useEffect(() => {
-    const stored = localStorage.getItem("orders");
-
-    if (stored) {
-      const parsedOrders = JSON.parse(stored);
-
-      setOrders(parsedOrders);
-
-      const revenue = parsedOrders.reduce(
-        (sum: number, order: any) => sum + order.total,
-        0
-      );
-
-      const customers = new Set(
-        parsedOrders.map((o: any) => o.phone)
-      ).size;
-
-      setStats({
-        totalOrders: parsedOrders.length,
-        totalRevenue: revenue,
-        totalCustomers: customers,
-      });
-    }
-  }, []);
-
-  // حذف اوردر
-  const deleteOrder = (id: number) => {
-    const updated = orders.filter((o) => o.id !== id);
-
-    setOrders(updated);
-
-    localStorage.setItem(
-      "orders",
-      JSON.stringify(updated)
-    );
-
-    const revenue = updated.reduce(
-      (sum: number, order: any) => sum + order.total,
+  const recalcStats = (ords: Order[]) => {
+    const revenue = ords.reduce(
+      (sum, order) => sum + order.total,
       0
     );
 
     const customers = new Set(
-      updated.map((o: any) => o.phone)
+      ords.map((o) => o.customer.phone)
     ).size;
 
     setStats({
-      totalOrders: updated.length,
+      totalOrders: ords.length,
       totalRevenue: revenue,
       totalCustomers: customers,
     });
+  };
+
+  useEffect(() => {
+    const ords = loadOrders();
+    setOrders(ords);
+    recalcStats(ords);
+  }, []);
+
+  const deleteOrder = (id: string) => {
+    const updated = orders.filter((o) => o.id !== id);
+    setOrders(updated);
+    saveOrders(updated);
+    recalcStats(updated);
   };
 
   return (
@@ -170,16 +149,20 @@ export default function DashboardPage() {
 
                     <div>
 
+                      <p className="text-xs text-zinc-500 font-mono tracking-wider mb-1">
+                        {order.displayId}
+                      </p>
+
                       <h3 className="text-2xl font-bold">
-                        {order.name}
+                        {order.customer.name}
                       </h3>
 
                       <p className="text-zinc-400">
-                        {order.phone}
+                        {order.customer.phone}
                       </p>
 
                       <p className="text-zinc-500 text-sm mt-1">
-                        {order.address}
+                        {order.customer.address}
                       </p>
 
                     </div>
@@ -191,7 +174,7 @@ export default function DashboardPage() {
                       </p>
 
                       <p className="text-zinc-500 text-sm">
-                        {order.date}
+                        {new Date(order.createdAt).toLocaleString()}
                       </p>
 
                     </div>
