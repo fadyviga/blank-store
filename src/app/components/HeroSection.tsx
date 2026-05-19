@@ -58,20 +58,20 @@ export default function HeroSection() {
           />
         </div>
 
-        <h1 className="overflow-hidden mb-6">
+        <h1 className="overflow-hidden mb-8">
           <span
-            className={`block text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black leading-[0.85] tracking-tighter text-white transition-all duration-1000 ease-out delay-400 ${
+            className={`block text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-[0.9] tracking-tight text-white transition-all duration-1000 ease-out delay-400 ${
               mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
             }`}
           >
-            LESS EFFORT
+            LESS EFFORT,
           </span>
           <span
-            className={`block text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black leading-[0.85] tracking-tighter text-white transition-all duration-1000 ease-out delay-500 ${
+            className={`block text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-[0.9] tracking-tight text-white transition-all duration-1000 ease-out delay-500 ${
               mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
             }`}
           >
-            MORE STYLE
+            MORE STYLE.
           </span>
         </h1>
 
