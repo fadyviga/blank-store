@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ShoppingCart, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCart } from "../hooks/useCart";
@@ -12,6 +12,7 @@ export default function ColorCard({ color }: { color: string }) {
   const router = useRouter();
   const [size, setSize] = useState("M");
   const [added, setAdded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   const { addToCart } = useCart();
   const { showToast } = useToast();
@@ -43,8 +44,10 @@ export default function ColorCard({ color }: { color: string }) {
       {/* Image */}
       <div className="overflow-hidden rounded-2xl mb-4">
         <img
+          ref={imgRef}
           src={image}
           alt={color}
+          onError={() => { if (imgRef.current) imgRef.current.src = "/placeholder.svg"; }}
           className="w-full aspect-square object-cover hover:scale-105 transition duration-500"
         />
       </div>

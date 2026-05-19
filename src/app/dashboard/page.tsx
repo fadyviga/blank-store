@@ -38,7 +38,6 @@ export default function DashboardPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
-  const [loggingIn, setLoggingIn] = useState(false);
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
@@ -151,8 +150,7 @@ export default function DashboardPage() {
 
             <button
               type="submit"
-              disabled={loggingIn}
-              className="w-full bg-white text-black py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full bg-white text-black py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition"
             >
               <LogIn size={20} />
               Sign In

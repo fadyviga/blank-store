@@ -175,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const changePassword = useCallback(
     (currentPassword: string, newPassword: string): string | null => {
       if (!user) return "Not authenticated";
-      if (newPassword.length < 4) return "New password must be at least 4 characters";
+      if (newPassword.length < 6) return "New password must be at least 6 characters";
       const users = getUsers();
       const index = users.findIndex((u) => u.id === user.id);
       if (index === -1) return "User not found";
