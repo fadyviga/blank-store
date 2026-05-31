@@ -17,13 +17,7 @@ interface Errors {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { user, isAuthenticated, loading } = useAuth();
-
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push("/login");
-    }
-  }, [isAuthenticated, loading, router]);
+  const { user } = useAuth();
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -95,11 +89,6 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!user) {
-      setSubmitError("Please log in before placing an order");
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
@@ -109,7 +98,7 @@ export default function CheckoutPage() {
           name: name.trim(),
           phone: phone.trim(),
           address: address.trim(),
-          email: user?.email || "",
+          email: "",
         },
         items: cart.map((item) => ({
           name: item.name,
@@ -156,22 +145,6 @@ export default function CheckoutPage() {
   const itemCount = Array.isArray(cart)
     ? cart.reduce((sum, item) => sum + (item.quantity || 0), 0)
     : 0;
-
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-white/20 border-t-white rounded-full" />
-      </main>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
-        <p className="text-zinc-500">Redirecting to login...</p>
-      </main>
-    );
-  }
 
   return (
     <main className="min-h-screen bg-black text-white p-6 md:p-10">
