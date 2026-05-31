@@ -31,6 +31,7 @@ async function updateStockForOrder(
 
   console.log(`[api/orders:${logId}] updateStockForOrder: action=${action}, orderId=${orderId}`);
 
+  // Fetch items from the orders JSON/string field
   const { data: order, error: orderErr } = await admin
     .from("orders")
     .select("items")
@@ -42,7 +43,7 @@ async function updateStockForOrder(
     return result;
   }
 
-  let items: Array<any> = [];
+  let items: any[] = [];
   if (typeof order.items === "string") {
     try { items = JSON.parse(order.items); } catch { items = []; }
   } else if (Array.isArray(order.items)) {
@@ -54,49 +55,88 @@ async function updateStockForOrder(
 
   for (const item of items) {
     try {
-      // STRICT VALIDATION: all three IDs required for stock deduction
-      const hasIds = item.product_id && item.color_id && item.size_id;
+      const productName = item.product_name || item.name || "";
+      const colorName = item.color || "";
+      const rawSize = (item.size || "").trim();
 
-      if (!hasIds) {
-        console.error(`[api/orders:${logId}] INVALID ORDER ITEM STRUCTURE — item "${item.name}/${item.color}/${item.size}" missing product_id/color_id/size_id`);
-        result.skippedItems.push({
-          name: item.name || "unknown",
-          color: item.color || "",
-          size: item.size || "",
-          reason: `missing IDs (product_id=${item.product_id}, color_id=${item.color_id}, size_id=${item.size_id})`,
-        });
+      // Normalize size: XXL → 2XL, XXXL → 3XL
+      const sizeLabel = rawSize
+        .replace(/^XXL$/i, "2XL")
+        .replace(/^XXXL$/i, "3XL");
+
+      const sizeNote = rawSize !== sizeLabel ? ` (normalized from "${rawSize}")` : "";
+      console.log(`[api/orders:${logId}] Resolving: product="${productName}", color="${colorName}", size="${sizeLabel}"${sizeNote}`);
+
+      if (!productName) {
+        console.error(`[api/orders:${logId}] SKIP: item has no name`);
+        result.skippedItems.push({ name: "", color: colorName, size: sizeLabel, reason: "missing product name" });
         continue;
       }
 
-      // ID-based lookup: match variant by product_id, color_id, size_id
+      // Look up product by name (ILIKE substring match for flexibility)
+      const { data: product } = await admin
+        .from("products")
+        .select("id")
+        .ilike("name", `%${productName}%`)
+        .maybeSingle();
+
+      if (!product) {
+        console.warn(`[api/orders:${logId}] SKIP: product not found — "${productName}"`);
+        result.missingVariants.push({ name: productName, color: colorName, size: sizeLabel });
+        continue;
+      }
+      console.log(`[api/orders:${logId}]   → product ${product.id}`);
+
+      // Look up color by name
+      const { data: color } = await admin
+        .from("product_colors")
+        .select("id")
+        .eq("product_id", product.id)
+        .ilike("name", colorName)
+        .maybeSingle();
+
+      if (!color) {
+        console.warn(`[api/orders:${logId}] SKIP: color not found — "${colorName}" for product ${product.id}`);
+        result.missingVariants.push({ name: productName, color: colorName, size: sizeLabel });
+        continue;
+      }
+      console.log(`[api/orders:${logId}]   → color ${color.id}`);
+
+      // Look up size by label
+      const { data: size } = await admin
+        .from("product_sizes")
+        .select("id")
+        .ilike("label", sizeLabel)
+        .maybeSingle();
+
+      if (!size) {
+        console.warn(`[api/orders:${logId}] SKIP: size not found — "${sizeLabel}"`);
+        result.missingVariants.push({ name: productName, color: colorName, size: sizeLabel });
+        continue;
+      }
+      console.log(`[api/orders:${logId}]   → size ${size.id}`);
+
+      // Find the specific variant (product × color × size)
       const { data: variant, error: vErr } = await admin
         .from("product_variants")
         .select("id, stock")
-        .eq("product_id", item.product_id)
-        .eq("color_id", item.color_id)
-        .eq("size_id", item.size_id)
+        .eq("product_id", product.id)
+        .eq("color_id", color.id)
+        .eq("size_id", size.id)
         .maybeSingle();
 
       if (vErr) {
-        console.error(`[api/orders:${logId}] variant lookup error:`, vErr.message);
-        result.skippedItems.push({
-          name: item.name || "unknown",
-          color: item.color || "",
-          size: item.size || "",
-          reason: `DB error: ${vErr.message}`,
-        });
+        console.error(`[api/orders:${logId}] SKIP: variant lookup error:`, vErr.message);
+        result.skippedItems.push({ name: productName, color: colorName, size: sizeLabel, reason: vErr.message });
         continue;
       }
 
       if (!variant) {
-        console.warn(`[api/orders:${logId}] Variant not found for product=${item.product_id} color=${item.color_id} size=${item.size_id}`);
-        result.missingVariants.push({
-          name: item.name || "unknown",
-          color: item.color || "",
-          size: item.size || "",
-        });
+        console.warn(`[api/orders:${logId}] SKIP: no variant row for product=${product.id} color=${color.id} size=${size.id}`);
+        result.missingVariants.push({ name: productName, color: colorName, size: sizeLabel });
         continue;
       }
+      console.log(`[api/orders:${logId}]   → variant ${variant.id} (current stock=${variant.stock})`);
 
       const qty = item.quantity || 1;
       const change = isDeduct ? -qty : qty;
@@ -108,13 +148,8 @@ async function updateStockForOrder(
         .eq("id", variant.id);
 
       if (updErr) {
-        console.error(`[api/orders:${logId}] Failed to update variant ${variant.id}:`, updErr.message);
-        result.skippedItems.push({
-          name: item.name || "unknown",
-          color: item.color || "",
-          size: item.size || "",
-          reason: `update failed: ${updErr.message}`,
-        });
+        console.error(`[api/orders:${logId}] SKIP: failed to update variant ${variant.id}:`, updErr.message);
+        result.skippedItems.push({ name: productName, color: colorName, size: sizeLabel, reason: updErr.message });
         continue;
       }
 
@@ -123,20 +158,20 @@ async function updateStockForOrder(
         .insert({ variant_id: variant.id, change, reason, order_id: orderId });
 
       if (logErr) {
-        console.warn(`[api/orders:${logId}] inventory_logs insert failed (non-critical):`, logErr.message);
+        console.warn(`[api/orders:${logId}] inventory_logs insert failed:`, logErr.message);
       }
 
       if (isDeduct && newStock < 0) {
-        sendWhatsAppRestockAlert(item.name || "Product", item.color || "", item.size || "", newStock);
+        sendWhatsAppRestockAlert(productName, colorName, sizeLabel, newStock);
       }
 
-      console.log(`[api/orders:${logId}] ${isDeduct ? "Deducted" : "Restored"} ${qty} ${isDeduct ? "from" : "to"} variant ${variant.id}: ${variant.stock} -> ${newStock}`);
+      console.log(`[api/orders:${logId}] ${isDeduct ? "DEDUCT" : "RESTORE"} OK: variant ${variant.id}: ${variant.stock} → ${newStock} (qty=${qty})`);
       result.processed++;
     } catch (err) {
       const msg = err instanceof Error ? err.message : "unknown";
-      console.error(`[api/orders:${logId}] Unexpected error for ${item.name}/${item.color}/${item.size}:`, msg);
+      console.error(`[api/orders:${logId}] UNEXPECTED ERROR:`, msg);
       result.skippedItems.push({
-        name: item.name || "unknown",
+        name: item.product_name || item.name || "unknown",
         color: item.color || "",
         size: item.size || "",
         reason: `unexpected error: ${msg}`,
@@ -144,7 +179,7 @@ async function updateStockForOrder(
     }
   }
 
-  console.log(`[api/orders:${logId}] updateStockForOrder complete: ${result.processed}/${result.total} items processed, ${result.skippedItems.length} skipped, ${result.missingVariants.length} missing`);
+  console.log(`[api/orders:${logId}] Done: ${result.processed}/${result.total} processed, ${result.skippedItems.length} skipped, ${result.missingVariants.length} missing`);
   return result;
 }
 
