@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminClient } from "@/lib/supabase-admin";
+import { getAdminClient, getResponseError } from "@/lib/supabase-admin";
 
 export async function GET() {
   try {
@@ -11,7 +11,13 @@ export async function GET() {
       .order("created_at", { ascending: false });
 
     if (ordersErr) {
-      return NextResponse.json({ error: ordersErr.message }, { status: 500 });
+      const parsed = getResponseError(ordersErr);
+      if (parsed.htmlResponse) {
+        return NextResponse.json({
+          error: "Database connection failed. Check NEXT_PUBLIC_SUPABASE_URL in Vercel environment variables.",
+        }, { status: 500 });
+      }
+      return NextResponse.json({ error: parsed.cleanedMessage, orders: [] }, { status: 200 });
     }
 
     const totalOrders = orders?.length || 0;
@@ -21,21 +27,26 @@ export async function GET() {
     );
     const totalCustomers = customers.size;
 
-    const { data: products, error: prodErr } = await admin
-      .from("products")
-      .select("id, name");
+    let products: any[] = [];
+    let variants: any[] = [];
 
-    if (prodErr) {
-      return NextResponse.json({ error: prodErr.message }, { status: 500 });
+    try {
+      const { data: pData, error: pErr } = await admin
+        .from("products")
+        .select("id, name");
+      if (!pErr) products = pData || [];
+    } catch {
+      // products table may not exist
     }
 
-    const { data: variants, error: varErr } = await admin
-      .from("product_variants")
-      .select("*, product_colors(name), product_sizes(label)")
-      .order("stock", { ascending: true });
-
-    if (varErr) {
-      return NextResponse.json({ error: varErr.message }, { status: 500 });
+    try {
+      const { data: vData, error: vErr } = await admin
+        .from("product_variants")
+        .select("*, product_colors(name), product_sizes(label)")
+        .order("stock", { ascending: true });
+      if (!vErr) variants = vData || [];
+    } catch {
+      // variants table may not exist
     }
 
     const lowStockVariants = variants?.filter((v) => v.stock > 0 && v.stock <= 5) || [];

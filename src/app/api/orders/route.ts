@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminClient } from "@/lib/supabase-admin";
+import { getAdminClient, getResponseError, isHtmlResponse } from "@/lib/supabase-admin";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -18,28 +18,45 @@ export async function GET(request: NextRequest) {
     const { data, error } = await admin.from("orders").select("*").order("created_at", { ascending: false });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      const parsed = getResponseError(error);
+      if (parsed.htmlResponse) {
+        return NextResponse.json({
+          error: "Database connection failed. Check NEXT_PUBLIC_SUPABASE_URL in Vercel environment variables.",
+          hint: "Must point to your Supabase project URL (e.g. https://xxxx.supabase.co), not your Vercel deployment URL.",
+        }, { status: 500 });
+      }
+      if (parsed.tableNotFound) {
+        console.error("[api/orders] Orders table not found. Run schema migration.");
+        return NextResponse.json([]);
+      }
+      return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });
     }
 
-    const orders = (data || []).map((row: any) => ({
-      id: String(row.id),
-      displayId: row.display_id || `BLK-${String(row.id).padStart(6, "0")}`,
-      customer: {
-        name: row.name || "",
-        phone: row.phone || "",
-        address: row.address || row.customer_address || "",
-        email: row.email || "",
-      },
-      items: typeof row.items === "string" ? JSON.parse(row.items) : (row.items || []),
-      subtotal: row.subtotal || row.total || 0,
-      delivery: row.delivery || 0,
-      total: row.total || 0,
-      status: row.status || "pending",
-      createdAt: row.created_at || new Date().toISOString(),
-      userId: row.user_id || null,
-      internalNotes: row.internal_notes || "",
-      trackingNumber: row.tracking_number || "",
-    }));
+    const orders = (data || []).map((row: any) => {
+      let parsedItems = row.items || [];
+      if (typeof row.items === "string") {
+        try { parsedItems = JSON.parse(row.items); } catch { parsedItems = []; }
+      }
+      return {
+        id: String(row.id),
+        displayId: row.display_id || `BLK-${String(row.id).padStart(6, "0")}`,
+        customer: {
+          name: row.name || "",
+          phone: row.phone || "",
+          address: row.address || row.customer_address || "",
+          email: row.email || "",
+        },
+        items: parsedItems,
+        subtotal: row.subtotal || row.total || 0,
+        delivery: row.delivery || 0,
+        total: row.total || 0,
+        status: row.status || "pending",
+        createdAt: row.created_at || new Date().toISOString(),
+        userId: row.user_id || null,
+        internalNotes: row.internal_notes || "",
+        trackingNumber: row.tracking_number || "",
+      };
+    });
 
     return NextResponse.json(orders);
   } catch (err: unknown) {
@@ -106,7 +123,15 @@ export async function POST(request: NextRequest) {
 
     if (orderErr) {
       console.error(`[api/orders:${logId}] Insert error:`, orderErr);
-      return NextResponse.json({ error: `Failed to create order: ${orderErr.message}` }, { status: 500 });
+      const parsed = getResponseError(orderErr);
+      if (parsed.htmlResponse) {
+        return NextResponse.json({
+          error: "Database connection failed. Check NEXT_PUBLIC_SUPABASE_URL in Vercel environment variables.",
+          hint: "Must point to your Supabase project URL (e.g. https://xxxx.supabase.co), not your Vercel deployment URL.",
+          supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/\/[^@]+@/, "//***@") || "(not set)",
+        }, { status: 500 });
+      }
+      return NextResponse.json({ error: `Failed to create order: ${parsed.cleanedMessage}` }, { status: 500 });
     }
 
     const orderId = inserted?.id || String(Date.now());
@@ -170,13 +195,20 @@ export async function PATCH(request: NextRequest) {
 
     const { error } = await admin.from("orders").update(updates).eq("id", id);
     if (error) {
-      if (error.message?.includes("Could not find the")) {
+      const parsed = getResponseError(error);
+      if (parsed.htmlResponse) {
         return NextResponse.json({
-          error: `Database column missing: ${error.message}. Run the schema migration SQL in your Supabase SQL Editor to add missing columns.`,
+          error: "Database connection failed. Check NEXT_PUBLIC_SUPABASE_URL in Vercel environment variables.",
+          hint: "Must point to your Supabase project URL, not your Vercel deployment URL.",
+        }, { status: 500 });
+      }
+      if (parsed.columnNotFound) {
+        return NextResponse.json({
+          error: "Database column missing. Run schema-fix.sql in Supabase SQL Editor to add missing columns.",
           migrationFile: "schema-fix.sql",
         }, { status: 400 });
       }
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });

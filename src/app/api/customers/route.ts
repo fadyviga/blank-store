@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminClient } from "@/lib/supabase-admin";
+import { getAdminClient, getResponseError } from "@/lib/supabase-admin";
 
 export async function GET() {
   try {
@@ -11,7 +11,13 @@ export async function GET() {
       .order("created_at", { ascending: false });
 
     if (ordersErr) {
-      return NextResponse.json({ error: ordersErr.message }, { status: 500 });
+      const parsed = getResponseError(ordersErr);
+      if (parsed.htmlResponse) {
+        return NextResponse.json({
+          error: "Database connection failed. Check NEXT_PUBLIC_SUPABASE_URL in Vercel environment variables.",
+        }, { status: 500 });
+      }
+      return NextResponse.json({ error: parsed.cleanedMessage, customers: [] }, { status: 200 });
     }
 
     const customerMap = new Map<

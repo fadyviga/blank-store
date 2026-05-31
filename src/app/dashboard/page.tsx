@@ -664,13 +664,14 @@ function ProductsTab() {
         fetch("/api/colors"),
         fetch("/api/sizes"),
       ]);
-      const [pData, vData, cData, sData] = await Promise.all([
+      const [pRaw, vRaw, cRaw, sRaw] = await Promise.all([
         pRes.json(), vRes.json(), cRes.json(), sRes.json(),
       ]);
-      setProducts(pData);
-      setVariants(vData);
-      setColors(cData);
-      setSizes(sData);
+      // Handle both direct arrays and {data: [], warning: "..."} response formats
+      setProducts(Array.isArray(pRaw) ? pRaw : (pRaw.data || []));
+      setVariants(Array.isArray(vRaw) ? vRaw : (vRaw.data || []));
+      setColors(Array.isArray(cRaw) ? cRaw : (cRaw.data || []));
+      setSizes(Array.isArray(sRaw) ? sRaw : (sRaw.data || []));
     } catch (err) {
       console.error("Failed to load products:", err);
     }
@@ -752,12 +753,17 @@ function ProductsTab() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">Products</h2>
-        <button
-          onClick={() => { setShowForm(!showForm); setEditingProduct(null); setProductForm({ name: "", description: "", basePrice: BASE_PRICE, category: "tees", image: "" }); }}
-          className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition"
-        >
-          <Plus size={16} /> Add Product
-        </button>
+        <div className="flex gap-2">
+          {products.length === 0 && !loading && (
+            <span className="text-xs text-zinc-500 self-center mr-2">Products table not configured.</span>
+          )}
+          <button
+            onClick={() => { setShowForm(!showForm); setEditingProduct(null); setProductForm({ name: "", description: "", basePrice: BASE_PRICE, category: "tees", image: "" }); }}
+            className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition"
+          >
+            <Plus size={16} /> Add Product
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -1112,11 +1118,14 @@ function InventoryTab() {
         const [pRes, vRes, cRes, sRes] = await Promise.all([
           globalThis.fetch("/api/products"), globalThis.fetch("/api/variants"), globalThis.fetch("/api/colors"), globalThis.fetch("/api/sizes"),
         ]);
-        setProducts(await pRes.json());
-        setVariants(await vRes.json());
-        setColors(await cRes.json());
-        setSizes(await sRes.json());
-      } catch (err) { console.error(err); }
+        const [pRaw, vRaw, cRaw, sRaw] = await Promise.all([
+          pRes.json(), vRes.json(), cRes.json(), sRes.json(),
+        ]);
+        setProducts(Array.isArray(pRaw) ? pRaw : (pRaw.data || []));
+        setVariants(Array.isArray(vRaw) ? vRaw : (vRaw.data || []));
+        setColors(Array.isArray(cRaw) ? cRaw : (cRaw.data || []));
+        setSizes(Array.isArray(sRaw) ? sRaw : (sRaw.data || []));
+      } catch (err) { console.error("Failed to load inventory:", err); }
       setLoading(false);
     };
     loadData();
@@ -1220,8 +1229,8 @@ function CustomersTab({ orders }: { orders: Order[] }) {
     const fetchCustomers = async () => {
       try {
         const res = await fetch("/api/customers");
-        const data = await res.json();
-        setCustomers(data);
+        const raw = await res.json();
+        setCustomers(Array.isArray(raw) ? raw : (raw.customers || []));
       } catch (err) {
         console.error("Failed to load customers:", err);
       }
