@@ -77,6 +77,11 @@ async function updateStockForOrder(
   .from("products")
   .select("id, name");
 
+console.log(
+  `[api/orders:${logId}] Products in DB:`,
+  products?.map((p) => p.name)
+);
+
 const product =
   products?.find(
     (p) =>
@@ -84,6 +89,14 @@ const product =
       productName.toLowerCase().includes(p.name.toLowerCase())
   ) || null;
 
+  console.log(
+    `[api/orders:${logId}] Looking for "${productName}"`
+  );
+  
+  console.log(
+    `[api/orders:${logId}] Match result:`,
+    product
+  );
       if (!product) {
         console.warn(`[api/orders:${logId}] SKIP: product not found — "${productName}"`);
         result.missingVariants.push({ name: productName, color: colorName, size: sizeLabel });
@@ -301,6 +314,7 @@ export async function POST(request: NextRequest) {
             .ilike("name", item.name || "")
             .maybeSingle();
           product = exactProduct;
+
 
           if (!product) {
             const { data: fuzzyProduct } = await admin
