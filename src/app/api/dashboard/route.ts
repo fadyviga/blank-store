@@ -12,10 +12,14 @@ export async function GET() {
 
     if (ordersErr) {
       const parsed = getResponseError(ordersErr);
-      if (parsed.htmlResponse) {
+      if (parsed.htmlResponse || parsed.tableNotFound) {
+        console.error("[api/dashboard] Supabase unreachable or orders table missing:", parsed.cleanedMessage);
         return NextResponse.json({
-          error: "Database connection failed. Check NEXT_PUBLIC_SUPABASE_URL in Vercel environment variables.",
-        }, { status: 500 });
+          totalOrders: 0, totalRevenue: 0, totalCustomers: 0,
+          totalProducts: 0, totalVariants: 0,
+          lowStockVariants: 0, outOfStockVariants: 0, pendingOrders: 0,
+          lowStockItems: [], outOfStockItems: [], recentOrders: [], revenueByMonth: [],
+        });
       }
       return NextResponse.json({ error: parsed.cleanedMessage, orders: [] }, { status: 200 });
     }

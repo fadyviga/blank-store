@@ -12,12 +12,11 @@ export async function GET() {
 
     if (ordersErr) {
       const parsed = getResponseError(ordersErr);
-      if (parsed.htmlResponse) {
-        return NextResponse.json({
-          error: "Database connection failed. Check NEXT_PUBLIC_SUPABASE_URL in Vercel environment variables.",
-        }, { status: 500 });
+      if (parsed.htmlResponse || parsed.tableNotFound) {
+        console.error("[api/customers] Supabase unreachable:", parsed.cleanedMessage);
+        return NextResponse.json([]);
       }
-      return NextResponse.json({ error: parsed.cleanedMessage, customers: [] }, { status: 200 });
+      return NextResponse.json([]);
     }
 
     const customerMap = new Map<

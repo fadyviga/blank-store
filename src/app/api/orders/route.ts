@@ -19,14 +19,8 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       const parsed = getResponseError(error);
-      if (parsed.htmlResponse) {
-        return NextResponse.json({
-          error: "Database connection failed. Check NEXT_PUBLIC_SUPABASE_URL in Vercel environment variables.",
-          hint: "Must point to your Supabase project URL (e.g. https://xxxx.supabase.co), not your Vercel deployment URL.",
-        }, { status: 500 });
-      }
-      if (parsed.tableNotFound) {
-        console.error("[api/orders] Orders table not found. Run schema migration.");
+      if (parsed.htmlResponse || parsed.tableNotFound) {
+        console.error(`[api/orders:${logId}] Supabase unreachable or orders table missing: ${parsed.cleanedMessage}`);
         return NextResponse.json([]);
       }
       return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });
@@ -124,14 +118,10 @@ export async function POST(request: NextRequest) {
     if (orderErr) {
       console.error(`[api/orders:${logId}] Insert error:`, orderErr);
       const parsed = getResponseError(orderErr);
-      if (parsed.htmlResponse) {
-        return NextResponse.json({
-          error: "Database connection failed. Check NEXT_PUBLIC_SUPABASE_URL in Vercel environment variables.",
-          hint: "Must point to your Supabase project URL (e.g. https://xxxx.supabase.co), not your Vercel deployment URL.",
-          supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/\/[^@]+@/, "//***@") || "(not set)",
-        }, { status: 500 });
-      }
-      return NextResponse.json({ error: `Failed to create order: ${parsed.cleanedMessage}` }, { status: 500 });
+      const msg = parsed.htmlResponse
+        ? "Database connection failed. Your Vercel NEXT_PUBLIC_SUPABASE_URL points to blank-eg.vercel.app instead of your Supabase project. Fix it in Vercel Dashboard > Environment Variables."
+        : `Failed to create order: ${parsed.cleanedMessage}`;
+      return NextResponse.json({ error: msg }, { status: 500 });
     }
 
     const orderId = inserted?.id || String(Date.now());
