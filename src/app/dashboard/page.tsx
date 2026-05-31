@@ -32,6 +32,7 @@ import {
 } from "../../lib/order";
 import type { Order, OrderStatus, Product, ProductVariant, CustomerProfile } from "@/types";
 import { STATUS_COLORS, STATUS_OPTIONS, BASE_PRICE, DELIVERY_FEE, DELIVERY_THRESHOLD } from "@/types";
+import { useToast } from "../components/Toast";
 
 type Tab =
   | "overview"
@@ -1031,12 +1032,48 @@ function VariantManager({
   );
 }
 
+function StockControls({ v, updating, onUpdate }: {
+  v: any;
+  updating: boolean;
+  onUpdate: (id: string, action: "increase" | "decrease") => void;
+}) {
+  return (
+    <div className="flex items-center justify-end gap-1">
+      <button
+        onClick={() => onUpdate(v.id, "decrease")}
+        disabled={v.stock <= 0 || updating}
+        className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition ${
+          v.stock <= 0
+            ? "bg-zinc-800 text-zinc-600 cursor-not-allowed"
+            : "bg-zinc-800 hover:bg-zinc-700 text-zinc-300 cursor-pointer"
+        }`}
+      >−</button>
+      <span className={`w-8 text-center font-bold ${
+        v.stock <= 0 ? "text-red-400" : v.stock <= 5 ? "text-yellow-400" : ""
+      }`}>
+        {updating ? (
+          <Loader2 size={14} className="animate-spin inline-block" />
+        ) : (
+          v.stock
+        )}
+      </span>
+      <button
+        onClick={() => onUpdate(v.id, "increase")}
+        disabled={updating}
+        className="w-7 h-7 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-sm font-bold transition cursor-pointer"
+      >+</button>
+    </div>
+  );
+}
+
 function InventoryTab() {
+  const { showToast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [colors, setColors] = useState<any[]>([]);
   const [sizes, setSizes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [updatingVariant, setUpdatingVariant] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -1057,6 +1094,30 @@ function InventoryTab() {
     };
     loadData();
   }, []);
+
+  const updateStock = async (variantId: string, action: "increase" | "decrease") => {
+    setUpdatingVariant(variantId);
+    try {
+      const res = await fetch("/api/inventory/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variant_id: variantId, action, amount: 1 }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update stock");
+      setVariants((prev: any[]) =>
+        prev.map((v: any) =>
+          v.id === variantId ? { ...v, stock: data.new_stock } : v
+        )
+      );
+      showToast(`Stock ${action === "increase" ? "increased" : "decreased"} to ${data.new_stock}`, "success");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to update stock", "error");
+    }
+    setUpdatingVariant(null);
+  };
+
+  const updating = (id: string) => updatingVariant === id;
 
   if (loading) return <div className="flex justify-center py-10"><Loader2 size={24} className="animate-spin text-zinc-500" /></div>;
 
@@ -1086,7 +1147,7 @@ function InventoryTab() {
                   <p className="text-sm font-medium">{v.product_colors?.name} / {v.product_sizes?.label}</p>
                   <p className="text-xs text-zinc-500">SKU: {v.sku}</p>
                 </div>
-                <span className="text-red-400 text-sm font-bold">0</span>
+                <StockControls v={v} updating={updating(v.id)} onUpdate={updateStock} />
               </div>
             ))}
           </div>
@@ -1105,7 +1166,7 @@ function InventoryTab() {
                   <p className="text-sm font-medium">{v.product_colors?.name} / {v.product_sizes?.label}</p>
                   <p className="text-xs text-zinc-500">SKU: {v.sku}</p>
                 </div>
-                <span className="text-yellow-400 text-sm font-bold">{v.stock}</span>
+                <StockControls v={v} updating={updating(v.id)} onUpdate={updateStock} />
               </div>
             ))}
           </div>
@@ -1132,10 +1193,8 @@ function InventoryTab() {
                   <td className="py-3">{v.product_colors?.name}</td>
                   <td className="py-3">{v.product_sizes?.label}</td>
                   <td className="py-3 text-zinc-500 text-xs font-mono">{v.sku}</td>
-                  <td className={`py-3 text-right font-bold ${
-                    v.stock <= 0 ? "text-red-400" : v.stock <= 5 ? "text-yellow-400" : ""
-                  }`}>
-                    {v.stock}
+                  <td className="py-3 text-right">
+                    <StockControls v={v} updating={updating(v.id)} onUpdate={updateStock} />
                   </td>
                 </tr>
               ))}
