@@ -40,7 +40,8 @@ type Tab =
   | "products"
   | "inventory"
   | "customers"
-  | "analytics";
+  | "analytics"
+  | "restock";
 
 export default function DashboardPage() {
   const handleLogout = () => {
@@ -90,6 +91,7 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
     { key: "inventory", label: "Inventory", icon: <Settings size={16} /> },
     { key: "customers", label: "Customers", icon: <Users size={16} /> },
     { key: "analytics", label: "Analytics", icon: <TrendingUp size={16} /> },
+    { key: "restock", label: "Restock", icon: <AlertTriangle size={16} /> },
   ];
 
   const tabContent = (() => {
@@ -106,6 +108,8 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
         return <CustomersTab orders={orders} />;
       case "analytics":
         return <AnalyticsTab orders={orders} />;
+      case "restock":
+        return <RestockTab />;
     }
   })();
 
@@ -1037,19 +1041,16 @@ function StockControls({ v, updating, onUpdate }: {
   updating: boolean;
   onUpdate: (id: string, action: "increase" | "decrease") => void;
 }) {
+  const isNegative = v.stock < 0;
   return (
     <div className="flex items-center justify-end gap-1">
       <button
         onClick={() => onUpdate(v.id, "decrease")}
-        disabled={v.stock <= 0 || updating}
-        className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition ${
-          v.stock <= 0
-            ? "bg-zinc-800 text-zinc-600 cursor-not-allowed"
-            : "bg-zinc-800 hover:bg-zinc-700 text-zinc-300 cursor-pointer"
-        }`}
+        disabled={updating}
+        className="w-7 h-7 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-sm font-bold transition cursor-pointer"
       >−</button>
       <span className={`w-8 text-center font-bold ${
-        v.stock <= 0 ? "text-red-400" : v.stock <= 5 ? "text-yellow-400" : ""
+        isNegative ? "text-red-400" : v.stock <= 5 ? "text-yellow-400" : ""
       }`}>
         {updating ? (
           <Loader2 size={14} className="animate-spin inline-block" />
@@ -1062,6 +1063,11 @@ function StockControls({ v, updating, onUpdate }: {
         disabled={updating}
         className="w-7 h-7 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-sm font-bold transition cursor-pointer"
       >+</button>
+      {isNegative && (
+        <span className="text-xs text-red-400 ml-1 whitespace-nowrap">
+          Need {Math.abs(v.stock)} items
+        </span>
+      )}
     </div>
   );
 }
@@ -1202,6 +1208,111 @@ function InventoryTab() {
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+function RestockTab() {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch("/api/restock");
+        const data = await res.json();
+        setItems(Array.isArray(data) ? data : (data.items || []));
+      } catch (err) {
+        console.error("Failed to load restock list:", err);
+      }
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  if (loading) return <div className="flex justify-center py-10"><Loader2 size={24} className="animate-spin text-zinc-500" /></div>;
+
+  const critical = items.filter((i: any) => i.stock_level === "critical_stock");
+  const low = items.filter((i: any) => i.stock_level === "low_stock");
+
+  return (
+    <div className="space-y-8">
+      <div className="grid grid-cols-3 gap-4">
+        <StatCard icon={<Package size={24} />} label="Need Restock" value={items.length} highlight={items.length > 0} />
+        <StatCard icon={<AlertTriangle size={24} />} label="Critical (≤ -5)" value={critical.length} highlight={critical.length > 0} />
+        <StatCard icon={<AlertTriangle size={24} />} label="Low Stock (< 0)" value={low.length} highlight={low.length > 0} />
+      </div>
+
+      {critical.length > 0 && (
+        <div>
+          <h3 className="font-bold mb-3 text-red-400 flex items-center gap-2">
+            <AlertTriangle size={16} /> Critical — Immediate Restock Needed
+          </h3>
+          <div className="space-y-2">
+            {critical.map((v: any) => (
+              <div key={v.id} className="bg-zinc-950 border border-red-500/30 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">{v.color} / {v.size}</p>
+                    <p className="text-xs text-zinc-500">SKU: {v.sku}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-red-400 font-bold">{v.stock}</p>
+                    <p className="text-xs text-red-400">Need {v.missing} items</p>
+                  </div>
+                </div>
+                <a
+                  href={v.whatsapp_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 mt-3 text-xs text-green-400 hover:text-green-300 transition"
+                >
+                  Send WhatsApp Alert →
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {low.length > 0 && (
+        <div>
+          <h3 className="font-bold mb-3 text-yellow-400 flex items-center gap-2">
+            <AlertTriangle size={16} /> Low Stock — Needs Restock
+          </h3>
+          <div className="space-y-2">
+            {low.map((v: any) => (
+              <div key={v.id} className="bg-zinc-950 border border-yellow-500/20 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">{v.color} / {v.size}</p>
+                    <p className="text-xs text-zinc-500">SKU: {v.sku}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-yellow-400 font-bold">{v.stock}</p>
+                    <p className="text-xs text-yellow-400">Need {v.missing} items</p>
+                  </div>
+                </div>
+                <a
+                  href={v.whatsapp_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 mt-3 text-xs text-green-400 hover:text-green-300 transition"
+                >
+                  Send WhatsApp Alert →
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {items.length === 0 && (
+        <div className="text-center py-16">
+          <Package size={48} className="mx-auto text-zinc-700 mb-4" />
+          <p className="text-zinc-500">All variants are fully stocked</p>
+        </div>
+      )}
     </div>
   );
 }

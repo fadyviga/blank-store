@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient, getResponseError } from "@/lib/supabase-admin";
 
+function enrichVariant(v: any) {
+  const stock = v.stock ?? 0;
+  let stockLevel: "normal" | "low_stock" | "critical_stock" = "normal";
+  if (stock <= -5) stockLevel = "critical_stock";
+  else if (stock < 0) stockLevel = "low_stock";
+  return { ...v, stock_level: stockLevel };
+}
+
 export async function GET() {
   try {
     const admin = getAdminClient();
@@ -17,7 +25,8 @@ export async function GET() {
       }
       return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });
     }
-    return NextResponse.json(data || []);
+    const enriched = (data || []).map(enrichVariant);
+    return NextResponse.json(enriched);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

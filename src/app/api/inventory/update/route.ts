@@ -45,11 +45,11 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Variant not found" }, { status: 404 });
     }
 
-    const currentStock = variant.stock || 0;
+    const currentStock = variant.stock ?? 0;
     const newStock =
       action === "increase"
         ? currentStock + amount
-        : Math.max(0, currentStock - amount);
+        : currentStock - amount;
 
     const { error: updateErr } = await admin
       .from("product_variants")

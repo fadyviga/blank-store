@@ -1,5 +1,103 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient, getResponseError, isHtmlResponse } from "@/lib/supabase-admin";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+const WHATSAPP_NUMBER = "201287659463";
+
+function sendWhatsAppRestockAlert(name: string, color: string, size: string, stock: number) {
+  const message = `⚠️ Restock Alert:\nProduct: ${name}\nVariant: ${color} - ${size}\nStock: ${stock}`;
+  const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  console.log(`[whatsapp] Restock alert URL: ${url}`);
+  return url;
+}
+
+async function deductStockForOrder(admin: SupabaseClient, orderId: string, logId: string) {
+  const { data: existing } = await admin
+    .from("inventory_logs")
+    .select("id")
+    .eq("order_id", orderId)
+    .eq("reason", "order_processing")
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    console.log(`[api/orders:${logId}] Stock already deducted for order ${orderId}, skipping`);
+    return;
+  }
+
+  const { data: order } = await admin
+    .from("orders")
+    .select("items")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (!order) return;
+
+  let items: Array<{ name: string; color: string; size: string; quantity: number }> = [];
+  if (typeof order.items === "string") {
+    try { items = JSON.parse(order.items); } catch { items = []; }
+  } else if (Array.isArray(order.items)) {
+    items = order.items;
+  }
+
+  for (const item of items) {
+    try {
+      const { data: product } = await admin
+        .from("products")
+        .select("id")
+        .eq("name", item.name || "")
+        .maybeSingle();
+      if (!product) continue;
+
+      const { data: color } = await admin
+        .from("product_colors")
+        .select("id")
+        .eq("product_id", product.id)
+        .eq("name", item.color || "")
+        .maybeSingle();
+      if (!color) continue;
+
+      const { data: size } = await admin
+        .from("product_sizes")
+        .select("id")
+        .eq("label", item.size || "")
+        .maybeSingle();
+      if (!size) continue;
+
+      const { data: variant } = await admin
+        .from("product_variants")
+        .select("id, stock")
+        .eq("product_id", product.id)
+        .eq("color_id", color.id)
+        .eq("size_id", size.id)
+        .maybeSingle();
+      if (!variant) continue;
+
+      const newStock = variant.stock - (item.quantity || 1);
+
+      await admin
+        .from("product_variants")
+        .update({ stock: newStock, updated_at: new Date().toISOString() })
+        .eq("id", variant.id);
+
+      await admin
+        .from("inventory_logs")
+        .insert({
+          variant_id: variant.id,
+          change: -(item.quantity || 1),
+          reason: "order_processing",
+          order_id: orderId,
+        });
+
+      if (newStock < 0) {
+        sendWhatsAppRestockAlert(item.name || "Oversized Tee", item.color || "", item.size || "", newStock);
+      }
+
+      console.log(`[api/orders:${logId}] Deducted ${item.quantity} from variant ${variant.id}: ${variant.stock} -> ${newStock}`);
+    } catch (err) {
+      console.error(`[api/orders:${logId}] Failed to deduct stock for ${item.name}/${item.color}/${item.size}:`, err);
+    }
+  }
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -199,6 +297,10 @@ export async function PATCH(request: NextRequest) {
         }, { status: 400 });
       }
       return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });
+    }
+
+    if (status === "processing") {
+      await deductStockForOrder(admin, id as string, logId);
     }
 
     return NextResponse.json({ success: true });
