@@ -59,10 +59,9 @@ async function updateStockForOrder(
       const colorName = item.color || "";
       const rawSize = (item.size || "").trim();
 
-      // Normalize size: XXL → 2XL, XXXL → 3XL
       const sizeLabel = rawSize
-        .replace(/^XXL$/i, "2XL")
-        .replace(/^XXXL$/i, "3XL");
+  .replace(/^XXL$/i, "2XL")
+  .replace(/^XXXL$/i, "3XL");
 
       const sizeNote = rawSize !== sizeLabel ? ` (normalized from "${rawSize}")` : "";
       console.log(`[api/orders:${logId}] Resolving: product="${productName}", color="${colorName}", size="${sizeLabel}"${sizeNote}`);
@@ -284,11 +283,9 @@ export async function POST(request: NextRequest) {
       (items || []).map(async (item: any) => {
         const enriched = { ...item };
 
-        // Normalize size: XXL → 2XL, XXXL → 3XL
         const normalizedSize = (item.size || "")
-          .replace(/^XXL$/i, "2XL")
-          .replace(/^XXXL$/i, "3XL");
-
+  .replace(/^XXL$/i, "2XL")
+  .replace(/^XXXL$/i, "3XL");
         try {
           // Find product: try exact match first, then substring
           let product: { id: string } | null = null;
