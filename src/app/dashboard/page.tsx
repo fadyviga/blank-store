@@ -17,7 +17,6 @@ import {
   ChevronDown,
   ChevronUp,
   BarChart3,
-  LogIn,
   Loader2,
   RefreshCw,
   Eye,
@@ -34,10 +33,6 @@ import {
 import type { Order, OrderStatus, Product, ProductVariant, CustomerProfile } from "@/types";
 import { STATUS_COLORS, STATUS_OPTIONS, BASE_PRICE, DELIVERY_FEE, DELIVERY_THRESHOLD } from "@/types";
 
-const DASHBOARD_USERNAME = "blank";
-const DASHBOARD_PASSWORD = "blank@2026";
-const STORAGE_KEY = "blank_dashboard_auth";
-
 type Tab =
   | "overview"
   | "orders"
@@ -47,78 +42,10 @@ type Tab =
   | "analytics";
 
 export default function DashboardPage() {
-  const [authed, setAuthed] = useState(false);
-  const [checking, setChecking] = useState(true);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [loginError, setLoginError] = useState("");
-
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "true") setAuthed(true);
-    setChecking(false);
-  }, []);
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError("");
-    if (!username.trim() || !password.trim()) {
-      setLoginError("Please fill in all fields");
-      return;
-    }
-    if (username.trim() !== DASHBOARD_USERNAME || password !== DASHBOARD_PASSWORD) {
-      setLoginError("Invalid username or password");
-      return;
-    }
-    localStorage.setItem(STORAGE_KEY, "true");
-    setAuthed(true);
-  };
-
   const handleLogout = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    setAuthed(false);
+    document.cookie = "admin_session=; path=/; max-age=0; SameSite=Lax";
+    window.location.href = "/login";
   };
-
-  if (checking) {
-    return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
-        <Loader2 size={28} className="animate-spin text-zinc-500" />
-      </main>
-    );
-  }
-
-  if (!authed) {
-    return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-        <div className="w-full max-w-sm">
-          <h1 className="text-3xl font-bold text-center mb-8">Dashboard Login</h1>
-          <form onSubmit={handleLogin} className="space-y-5">
-            {loginError && (
-              <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl px-4 py-3 text-center">
-                {loginError}
-              </div>
-            )}
-            <input
-              type="text" placeholder="Username" value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-white/30 transition"
-            />
-            <input
-              type="password" placeholder="Password" value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-white/30 transition"
-            />
-            <button
-              type="submit"
-              className="w-full bg-white text-black py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition"
-            >
-              <LogIn size={20} /> Sign In
-            </button>
-          </form>
-        </div>
-      </main>
-    );
-  }
 
   return <AuthenticatedDashboard onLogout={handleLogout} />;
 }

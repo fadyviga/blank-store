@@ -1,16 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { LogIn, Loader2 } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
 
-export default function LoginPage() {
-  const router = useRouter();
-  const { login } = useAuth();
-
-  const [email, setEmail] = useState("");
+export default function AdminLoginPage() {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,27 +13,29 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
 
-    if (!email.trim() || !password.trim()) {
+    if (!username.trim() || !password.trim()) {
       setError("Please fill in all fields");
       return;
     }
 
     setLoading(true);
-    const err = await login(email, password);
-    setLoading(false);
 
-    if (err) {
-      setError(err);
-      return;
+    await new Promise((r) => setTimeout(r, 300));
+
+    if (username.trim() === "admin" && password === "blank@2026") {
+      document.cookie = "admin_session=true; path=/; max-age=86400; SameSite=Lax";
+      window.location.href = "/dashboard";
+    } else {
+      setError("Invalid credentials");
+      setLoading(false);
     }
-
-    router.push("/");
   };
 
   return (
     <main className="min-h-screen bg-black text-white flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
-        <h1 className="text-3xl font-bold text-center mb-8">Sign In</h1>
+        <h1 className="text-3xl font-bold text-center mb-2">Admin Login</h1>
+        <p className="text-zinc-500 text-sm text-center mb-8">Blank Store Dashboard</p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
@@ -49,10 +45,10 @@ export default function LoginPage() {
           )}
 
           <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             className="w-full bg-zinc-900 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-white/30 transition"
           />
 
@@ -77,15 +73,6 @@ export default function LoginPage() {
             Sign In
           </button>
         </form>
-
-        <div className="mt-6 text-center text-sm text-zinc-500">
-          <p>
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-white hover:underline">
-              Sign up
-            </Link>
-          </p>
-        </div>
       </div>
     </main>
   );
