@@ -73,11 +73,16 @@ async function updateStockForOrder(
       }
 
       // Look up product by name (ILIKE substring match for flexibility)
-      const { data: product } = await admin
-        .from("products")
-        .select("id")
-        .ilike("name", `%${productName}%`)
-        .maybeSingle();
+      const { data: products } = await admin
+  .from("products")
+  .select("id, name");
+
+const product =
+  products?.find(
+    (p) =>
+      p.name.toLowerCase().includes(productName.toLowerCase()) ||
+      productName.toLowerCase().includes(p.name.toLowerCase())
+  ) || null;
 
       if (!product) {
         console.warn(`[api/orders:${logId}] SKIP: product not found — "${productName}"`);
