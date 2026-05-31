@@ -82,12 +82,19 @@ console.log(
   products?.map((p) => p.name)
 );
 
+const searchWords = productName
+  .toLowerCase()
+  .split(" ")
+  .filter(Boolean);
+
 const product =
-  products?.find(
-    (p) =>
-      p.name.toLowerCase().includes(productName.toLowerCase()) ||
-      productName.toLowerCase().includes(p.name.toLowerCase())
-  ) || null;
+  products?.find((p) => {
+    const dbName = p.name.toLowerCase();
+
+    return searchWords.every((word) =>
+      dbName.includes(word)
+    );
+  }) || null;
 
   console.log(
     `[api/orders:${logId}] Looking for "${productName}"`
