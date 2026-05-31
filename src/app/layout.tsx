@@ -16,13 +16,41 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://blank-eg.com";
+
 export const metadata: Metadata = {
-  title: "Blank EG",
+  metadataBase: new URL(baseUrl),
+  title: {
+    default: "Blank EG — Premium Egyptian Streetwear",
+    template: "%s | Blank EG",
+  },
   description:
-    "Premium Egyptian streetwear brand focused on oversized essentials and timeless fashion.",
+    "Premium Egyptian streetwear brand focused on oversized essentials and timeless fashion. Shop the latest collection of premium tees and streetwear.",
+  keywords: [
+    "blank eg", "egyptian streetwear", "oversized tees", "premium essentials",
+    "egypt fashion", "streetwear cairo", "blank clothing",
+  ],
+  authors: [{ name: "Blank EG" }],
+  openGraph: {
+    type: "website",
+    locale: "en_GB",
+    siteName: "Blank EG",
+    title: "Blank EG — Premium Egyptian Streetwear",
+    description: "Premium Egyptian streetwear brand focused on oversized essentials and timeless fashion.",
+    images: [{ url: "/logo.png", width: 260, height: 72 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Blank EG — Premium Egyptian Streetwear",
+    description: "Premium Egyptian streetwear brand focused on oversized essentials.",
+  },
   icons: {
     icon: "/logo.png",
     shortcut: "/logo.png",
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 

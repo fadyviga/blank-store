@@ -7,6 +7,11 @@ import PromoPopup from "./components/PromoPopup";
 import HeroSection from "./components/HeroSection";
 import SizeChart from "./components/SizeChart";
 
+const COLORS = [
+  "Black", "White", "Blue", "Green", "Gray",
+  "Brown", "Navy", "Burgundy", "Beige",
+];
+
 export default function Home() {
   const [popupActive, setPopupActive] = useState(false);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
@@ -14,11 +19,6 @@ export default function Home() {
   const handlePopupVisible = useCallback((visible: boolean) => {
     setPopupActive(visible);
   }, []);
-
-  const colors = [
-    "Black", "White", "Blue", "Green", "Gray",
-    "Brown", "Navy", "Burgundy", "Beige",
-  ];
 
   return (
     <main className="min-h-screen text-white">
@@ -41,7 +41,7 @@ export default function Home() {
             </button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-            {colors.map((color) => (
+            {COLORS.map((color) => (
               <ColorCard key={color} color={color} />
             ))}
           </div>

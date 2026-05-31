@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ShoppingBag, Loader2, Ruler } from "lucide-react";
 import { useCart } from "../hooks/useCart";
 import { useAuth } from "../context/AuthContext";
-import { createOrder, saveOrder } from "../../lib/order";
+import { saveOrder } from "../../lib/order";
 import SizeChart from "../components/SizeChart";
+import { DELIVERY_THRESHOLD, DELIVERY_FEE, BASE_PRICE } from "@/types";
 
 interface Errors {
   name?: string;
@@ -49,6 +50,11 @@ export default function CheckoutPage() {
     const errs: Errors = {};
     if (!name.trim()) errs.name = "Please enter your name";
     if (!phone.trim()) errs.phone = "Please enter your phone number";
+    else {
+      const digits = phone.replace(/\D/g, "");
+      if (digits.length < 10 || digits.length > 11)
+        errs.phone = "Enter a valid Egyptian phone number (e.g. 01012345678)";
+    }
     if (!address.trim()) errs.address = "Please enter your delivery address";
     return errs;
   };
@@ -58,32 +64,21 @@ export default function CheckoutPage() {
     setErrors(validate());
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await placeOrder();
-  };
-
   const placeOrder = async () => {
-    console.log("PLACE ORDER CLICKED");
     setSubmitError("");
 
     setTouched({ name: true, phone: true, address: true });
     const newErrors = validate();
     setErrors(newErrors);
 
-    if (Object.keys(newErrors).length > 0) {
-      console.log("BLOCKED by validation:", newErrors);
-      return;
-    }
+    if (Object.keys(newErrors).length > 0) return;
 
     if (!Array.isArray(cart) || cart.length === 0) {
-      console.log("BLOCKED: cart is empty or not an array", cart);
       setSubmitError("Your cart is empty");
       return;
     }
 
     if (!user) {
-      console.log("BLOCKED: no user");
       setSubmitError("Please log in before placing an order");
       return;
     }
@@ -91,39 +86,40 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     try {
-      console.log("STEP 1 - createOrder");
-      const order = createOrder(
-        {
+      const result = await saveOrder({
+        customer: {
           name: name.trim(),
           phone: phone.trim(),
           address: address.trim(),
           email: user?.email || "",
         },
-        cart,
-        cartTotal,
-        user?.id
-      );
-      console.log("order created:", order.displayId);
+        items: cart.map((item) => ({
+          name: item.name,
+          color: item.color,
+          size: item.size,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image,
+        })),
+        subtotal: cartTotal,
+        userId: user?.id,
+      });
 
-      console.log("STEP 2 - saveOrder");
-      const err = await saveOrder(order);
-      if (err) {
-        console.log("saveOrder failed:", err);
-        setSubmitError(err);
+      if (!result.success) {
+        setSubmitError("Failed to place order. Please try again.");
         setIsSubmitting(false);
         return;
       }
-      console.log("saveOrder succeeded");
 
-      console.log("STEP 3 - clearCart");
       clearCart();
 
-      console.log("STEP 4 - redirect");
+      const displayId = result.order?.displayId || "";
       await new Promise((r) => setTimeout(r, 600));
-      router.push(`/thanks?id=${order.displayId}`);
+      router.push(`/thanks?id=${displayId}`);
     } catch (ex) {
-      console.log("CATCH block hit:", ex);
-      setSubmitError("Something went wrong. Please try again.");
+      setSubmitError(
+        ex instanceof Error ? ex.message : "Something went wrong. Please try again."
+      );
       setIsSubmitting(false);
     }
   };
@@ -135,7 +131,7 @@ export default function CheckoutPage() {
         : "border-white/10 focus:border-white/30"
     }`;
 
-  const delivery = cartTotal >= 1000 ? 0 : 50;
+  const delivery = cartTotal >= DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
   const total = cartTotal + delivery;
 
   const itemCount = Array.isArray(cart)
@@ -185,7 +181,13 @@ export default function CheckoutPage() {
         ) : (
           <div className="grid md:grid-cols-5 gap-8">
             <div className="md:col-span-3 order-2 md:order-1">
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  placeOrder();
+                }}
+                className="space-y-6"
+              >
                 <div>
                   <label className="block text-sm text-zinc-400 mb-2">
                     Full Name
@@ -255,8 +257,7 @@ export default function CheckoutPage() {
                 )}
 
                 <button
-                  type="button"
-                  onClick={placeOrder}
+                  type="submit"
                   disabled={isSubmitting}
                   className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition ${
                     isSubmitting
