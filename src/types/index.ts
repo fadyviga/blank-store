@@ -35,6 +35,8 @@ export interface Order {
   userId?: string;
   internalNotes?: string;
   trackingNumber?: string;
+  couponCode?: string;
+  discountAmount?: number;
 }
 
 export interface Product {

@@ -23,6 +23,8 @@ import {
   Settings,
   Truck,
   FileText,
+  DollarSign,
+  Receipt,
 } from "lucide-react";
 import {
   loadOrders,
@@ -33,6 +35,9 @@ import {
 import type { Order, OrderStatus, Product, ProductVariant, CustomerProfile } from "@/types";
 import { STATUS_COLORS, STATUS_OPTIONS, BASE_PRICE, DELIVERY_FEE, DELIVERY_THRESHOLD } from "@/types";
 import { useToast } from "../components/Toast";
+import PurchasesTab from "./PurchasesTab";
+import ExpensesTab from "./ExpensesTab";
+import ReportsTab from "./ReportsTab";
 
 type Tab =
   | "overview"
@@ -41,7 +46,10 @@ type Tab =
   | "inventory"
   | "customers"
   | "analytics"
-  | "restock";
+  | "restock"
+  | "purchases"
+  | "expenses"
+  | "reports";
 
 export default function DashboardPage() {
   const handleLogout = () => {
@@ -92,6 +100,9 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
     { key: "customers", label: "Customers", icon: <Users size={16} /> },
     { key: "analytics", label: "Analytics", icon: <TrendingUp size={16} /> },
     { key: "restock", label: "Restock", icon: <AlertTriangle size={16} /> },
+    { key: "purchases", label: "Purchases", icon: <DollarSign size={16} /> },
+    { key: "expenses", label: "Expenses", icon: <Receipt size={16} /> },
+    { key: "reports", label: "Reports", icon: <BarChart3 size={16} /> },
   ];
 
   const tabContent = (() => {
@@ -110,6 +121,12 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
         return <AnalyticsTab orders={orders} />;
       case "restock":
         return <RestockTab />;
+      case "purchases":
+        return <PurchasesTab />;
+      case "expenses":
+        return <ExpensesTab />;
+      case "reports":
+        return <ReportsTab />;
     }
   })();
 

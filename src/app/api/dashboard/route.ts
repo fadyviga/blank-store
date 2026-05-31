@@ -19,10 +19,16 @@ export async function GET() {
           totalProducts: 0, totalVariants: 0,
           lowStockVariants: 0, outOfStockVariants: 0, pendingOrders: 0,
           lowStockItems: [], outOfStockItems: [], recentOrders: [], revenueByMonth: [],
+          todayRevenue: 0, monthlyRevenue: 0, completedOrders: 0,
+          inventoryValue: 0, netProfit: 0, advertisingSpend: 0,
         });
       }
       return NextResponse.json({ error: parsed.cleanedMessage, orders: [] }, { status: 200 });
     }
+
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
     const totalOrders = orders?.length || 0;
     const totalRevenue = orders?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
@@ -30,6 +36,17 @@ export async function GET() {
       orders?.map((o) => o.phone || o.name || o.user_id).filter(Boolean)
     );
     const totalCustomers = customers.size;
+
+    const todayRevenue = orders
+      ?.filter((o) => o.created_at >= todayStart && o.status !== "cancelled")
+      .reduce((sum, o) => sum + (o.total || 0), 0) || 0;
+
+    const monthlyRevenue = orders
+      ?.filter((o) => o.created_at >= monthStart && o.status !== "cancelled")
+      .reduce((sum, o) => sum + (o.total || 0), 0) || 0;
+
+    const completedOrders = orders?.filter((o) => o.status === "completed").length || 0;
+    const pendingOrders = orders?.filter((o) => o.status === "pending").length || 0;
 
     let products: any[] = [];
     let variants: any[] = [];
@@ -39,9 +56,7 @@ export async function GET() {
         .from("products")
         .select("id, name");
       if (!pErr) products = pData || [];
-    } catch {
-      // products table may not exist
-    }
+    } catch { /* products table may not exist */ }
 
     try {
       const { data: vData, error: vErr } = await admin
@@ -49,29 +64,46 @@ export async function GET() {
         .select("*, product_colors(name), product_sizes(label)")
         .order("stock", { ascending: true });
       if (!vErr) variants = vData || [];
-    } catch {
-      // variants table may not exist
-    }
+    } catch { /* variants table may not exist */ }
 
     const lowStockVariants = variants?.filter((v) => v.stock > 0 && v.stock <= 5) || [];
     const outOfStockVariants = variants?.filter((v) => v.stock <= 0) || [];
     const totalVariants = variants?.length || 0;
     const totalProducts = products?.length || 0;
 
-    const monthlyRevenue: Record<string, number> = {};
+    const inventoryValue = variants?.reduce((sum, v) => sum + ((v.stock || 0) * (v.cost_price || 0)), 0) || 0;
+
+    let expenses: any[] = [];
+    try {
+      const { data: eData, error: eErr } = await admin
+        .from("expenses")
+        .select("*");
+      if (!eErr) expenses = eData || [];
+    } catch { /* expenses table may not exist */ }
+
+    const monthExpenses = expenses
+      ?.filter((e) => e.date >= monthStart.slice(0, 10))
+      .reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+
+    const advertisingSpend = expenses
+      ?.filter((e) => ["Facebook Ads", "Instagram Ads", "TikTok Ads", "Google Ads"].includes(e.category))
+      .reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+
+    const netProfit = monthlyRevenue - monthExpenses;
+
+    const monthlyRevMap: Record<string, number> = {};
     orders?.forEach((o) => {
       if (o.status !== "cancelled") {
         const month = o.created_at?.slice(0, 7);
-        if (month) monthlyRevenue[month] = (monthlyRevenue[month] || 0) + (o.total || 0);
+        if (month) monthlyRevMap[month] = (monthlyRevMap[month] || 0) + (o.total || 0);
       }
     });
 
-    const revenueByMonth = Object.entries(monthlyRevenue)
+    const revenueByMonth = Object.entries(monthlyRevMap)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([month, revenue]) => ({ month, revenue }));
 
     const recentOrders = orders?.slice(0, 10) || [];
-    const pendingOrders = orders?.filter((o) => o.status === "pending").length || 0;
 
     return NextResponse.json({
       totalOrders,
@@ -82,10 +114,16 @@ export async function GET() {
       lowStockVariants: lowStockVariants.length,
       outOfStockVariants: outOfStockVariants.length,
       pendingOrders,
+      completedOrders,
       lowStockItems: lowStockVariants,
       outOfStockItems: outOfStockVariants,
       recentOrders,
       revenueByMonth,
+      todayRevenue,
+      monthlyRevenue,
+      inventoryValue,
+      netProfit,
+      advertisingSpend,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";

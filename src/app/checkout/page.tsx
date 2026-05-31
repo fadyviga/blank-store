@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ShoppingBag, Loader2, Ruler } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Loader2, Ruler, Tag, XCircle } from "lucide-react";
 import { useCart } from "../hooks/useCart";
 import { useAuth } from "../context/AuthContext";
 import { saveOrder } from "../../lib/order";
@@ -28,6 +28,10 @@ export default function CheckoutPage() {
   const [submitError, setSubmitError] = useState("");
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [apiDiagnostics, setApiDiagnostics] = useState<string | null>(null);
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountValue: number } | null>(null);
+  const [couponError, setCouponError] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -75,6 +79,35 @@ export default function CheckoutPage() {
     checkApiHealth();
   }, [checkApiHealth]);
 
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponError("");
+    setAppliedCoupon(null);
+    try {
+      const res = await fetch("/api/coupons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponCode.trim(), orderTotal: cartTotal + delivery }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setAppliedCoupon({ code: couponCode.trim(), discountValue: data.discountValue });
+        setCouponCode("");
+      } else {
+        setCouponError(data.error || "Invalid discount code");
+      }
+    } catch {
+      setCouponError("Could not validate coupon");
+    }
+    setCouponLoading(false);
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponError("");
+  };
+
   const placeOrder = async () => {
     setSubmitError("");
 
@@ -110,6 +143,8 @@ export default function CheckoutPage() {
         })),
         subtotal: cartTotal,
         userId: user?.id,
+        couponCode: appliedCoupon?.code,
+        discountAmount: discount || undefined,
       });
       console.log("[Checkout] saveOrder returned:", result);
 
@@ -140,7 +175,8 @@ export default function CheckoutPage() {
     }`;
 
   const delivery = cartTotal >= DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
-  const total = cartTotal + delivery;
+  const discount = appliedCoupon?.discountValue || 0;
+  const total = cartTotal + delivery - discount;
 
   const itemCount = Array.isArray(cart)
     ? cart.reduce((sum, item) => sum + (item.quantity || 0), 0)
@@ -316,7 +352,43 @@ export default function CheckoutPage() {
                   ))}
                 </div>
 
-                <div className="pt-4 pb-2">
+                <div className="space-y-3 pt-4 pb-2 border-t border-white/10">
+                  <label className="text-xs text-zinc-500 flex items-center gap-1.5">
+                    <Tag size={12} /> Discount Code
+                  </label>
+                  {appliedCoupon ? (
+                    <div className="flex items-center justify-between bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3">
+                      <span className="text-sm text-green-400 font-medium">
+                        {appliedCoupon.code}: -{appliedCoupon.discountValue} EGP
+                      </span>
+                      <button onClick={removeCoupon} className="text-green-400 hover:text-green-300">
+                        <XCircle size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Enter discount code"
+                        value={couponCode}
+                        onChange={(e) => { setCouponCode(e.target.value); setCouponError(""); }}
+                        className="flex-1 bg-black border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30"
+                      />
+                      <button
+                        onClick={applyCoupon}
+                        disabled={couponLoading || !couponCode.trim()}
+                        className="px-4 py-3 bg-white text-black rounded-xl text-sm font-medium hover:scale-[1.02] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {couponLoading ? <Loader2 size={16} className="animate-spin" /> : "Apply"}
+                      </button>
+                    </div>
+                  )}
+                  {couponError && (
+                    <p className="text-red-400 text-xs">{couponError}</p>
+                  )}
+                </div>
+
+                <div className="pt-2 pb-2">
                   <button
                     onClick={() => setSizeGuideOpen(true)}
                     className="inline-flex items-center gap-2 text-xs text-zinc-500 hover:text-white transition"
@@ -341,9 +413,15 @@ export default function CheckoutPage() {
                       )}
                     </span>
                   </div>
+                  {discount > 0 && (
+                    <div className="flex justify-between text-sm text-green-400">
+                      <span>Discount</span>
+                      <span>-{discount} EGP</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-lg font-bold pt-2 border-t border-white/10">
                     <span>Total</span>
-                    <span>{total} EGP</span>
+                    <span>{Math.max(0, total)} EGP</span>
                   </div>
                 </div>
               </div>

@@ -255,6 +255,8 @@ export async function GET(request: NextRequest) {
         userId: row.user_id || null,
         internalNotes: row.internal_notes || "",
         trackingNumber: row.tracking_number || "",
+        couponCode: row.coupon_code || undefined,
+        discountAmount: row.discount_amount ? Number(row.discount_amount) : undefined,
       };
     });
 
@@ -276,11 +278,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
     }
 
-    const { customer, items, subtotal, userId } = body as {
+    const { customer, items, subtotal, userId, couponCode, discountAmount } = body as {
       customer?: { name?: string; phone?: string; address?: string; email?: string };
       items?: Array<{ name: string; color?: string; size?: string; price: number; quantity: number; image?: string }>;
       subtotal?: number;
       userId?: string;
+      couponCode?: string;
+      discountAmount?: number;
     };
 
     if (!customer || !items || !Array.isArray(items) || items.length === 0) {
@@ -291,7 +295,8 @@ export async function POST(request: NextRequest) {
     if (!customer.address?.trim()) return NextResponse.json({ error: "Customer address is required" }, { status: 400 });
 
     const delivery = (subtotal || 0) >= 1000 ? 0 : 50;
-    const total = (subtotal || 0) + delivery;
+    const discount = Math.max(0, discountAmount || 0);
+    const total = Math.max(0, (subtotal || 0) + delivery - discount);
 
     let admin;
     try {
@@ -385,6 +390,9 @@ export async function POST(request: NextRequest) {
       created_at: new Date().toISOString(),
     };
 
+    if (couponCode) orderRow.coupon_code = couponCode;
+    if (discountAmount && discountAmount > 0) orderRow.discount_amount = discountAmount;
+
     console.log(`[api/orders:${logId}] Inserting order with columns:`, Object.keys(orderRow));
 
     const { data: inserted, error: orderErr } = await admin
@@ -420,6 +428,8 @@ export async function POST(request: NextRequest) {
         status: "pending",
         createdAt: new Date().toISOString(),
         userId,
+        couponCode: couponCode || undefined,
+        discountAmount: discountAmount || undefined,
       },
     });
   } catch (err: unknown) {

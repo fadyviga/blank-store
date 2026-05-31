@@ -87,6 +87,8 @@ export async function saveOrder(order: {
   }>;
   subtotal: number;
   userId?: string;
+  couponCode?: string;
+  discountAmount?: number;
 }): Promise<{ success: boolean; order?: Order }> {
   console.log("[saveOrder] Sending order to API:", {
     customer: order.customer,
