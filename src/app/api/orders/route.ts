@@ -11,92 +11,129 @@ function sendWhatsAppRestockAlert(name: string, color: string, size: string, sto
   return url;
 }
 
-async function deductStockForOrder(admin: SupabaseClient, orderId: string, logId: string) {
-  const { data: existing } = await admin
-    .from("inventory_logs")
-    .select("id")
-    .eq("order_id", orderId)
-    .eq("reason", "order_processing")
-    .limit(1);
+async function updateStockForOrder(
+  admin: SupabaseClient,
+  orderId: string,
+  logId: string,
+  action: "deduct" | "restore"
+): Promise<{ processed: number; total: number }> {
+  const isDeduct = action === "deduct";
+  const reason = isDeduct ? "order_processing" : "order_cancelled";
 
-  if (existing && existing.length > 0) {
-    console.log(`[api/orders:${logId}] Stock already deducted for order ${orderId}, skipping`);
-    return;
-  }
+  console.log(`[api/orders:${logId}] updateStockForOrder: action=${action}, orderId=${orderId}`);
 
-  const { data: order } = await admin
+  const { data: order, error: orderErr } = await admin
     .from("orders")
     .select("items")
     .eq("id", orderId)
     .maybeSingle();
 
-  if (!order) return;
+  if (orderErr || !order) {
+    console.error(`[api/orders:${logId}] Failed to fetch order ${orderId}:`, orderErr?.message);
+    return { processed: 0, total: 0 };
+  }
 
-  let items: Array<{ name: string; color: string; size: string; quantity: number }> = [];
+  let items: Array<{ name: string; color: string; size: string; quantity: number; variant_id?: string }> = [];
   if (typeof order.items === "string") {
     try { items = JSON.parse(order.items); } catch { items = []; }
   } else if (Array.isArray(order.items)) {
     items = order.items;
   }
 
+  console.log(`[api/orders:${logId}] updateStockForOrder: ${items.length} items`);
+
+  let processed = 0;
+
   for (const item of items) {
     try {
-      const { data: product } = await admin
-        .from("products")
-        .select("id")
-        .eq("name", item.name || "")
-        .maybeSingle();
-      if (!product) continue;
+      let variant: { id: string; stock: number } | null = null;
 
-      const { data: color } = await admin
-        .from("product_colors")
-        .select("id")
-        .eq("product_id", product.id)
-        .eq("name", item.color || "")
-        .maybeSingle();
-      if (!color) continue;
+      if (item.variant_id) {
+        const { data: v, error: vErr } = await admin
+          .from("product_variants")
+          .select("id, stock")
+          .eq("id", item.variant_id)
+          .maybeSingle();
+        if (vErr) console.error(`[api/orders:${logId}] variant lookup by id failed:`, vErr.message);
+        variant = v;
+      }
 
-      const { data: size } = await admin
-        .from("product_sizes")
-        .select("id")
-        .eq("label", item.size || "")
-        .maybeSingle();
-      if (!size) continue;
+      if (!variant) {
+        console.log(`[api/orders:${logId}] Falling back to name-based variant lookup for ${item.name}/${item.color}/${item.size}`);
 
-      const { data: variant } = await admin
-        .from("product_variants")
-        .select("id, stock")
-        .eq("product_id", product.id)
-        .eq("color_id", color.id)
-        .eq("size_id", size.id)
-        .maybeSingle();
-      if (!variant) continue;
+        const { data: product } = await admin
+          .from("products")
+          .select("id")
+          .ilike("name", item.name || "")
+          .maybeSingle();
+        if (!product) { console.warn(`[api/orders:${logId}] Product not found: "${item.name}"`); continue; }
 
-      const newStock = variant.stock - (item.quantity || 1);
+        const { data: color } = await admin
+          .from("product_colors")
+          .select("id")
+          .eq("product_id", product.id)
+          .ilike("name", item.color || "")
+          .maybeSingle();
+        if (!color) { console.warn(`[api/orders:${logId}] Color not found: "${item.color}"`); continue; }
 
-      await admin
+        const { data: size } = await admin
+          .from("product_sizes")
+          .select("id")
+          .ilike("label", item.size || "")
+          .maybeSingle();
+        if (!size) { console.warn(`[api/orders:${logId}] Size not found: "${item.size}"`); continue; }
+
+        const { data: v, error: vErr } = await admin
+          .from("product_variants")
+          .select("id, stock")
+          .eq("product_id", product.id)
+          .eq("color_id", color.id)
+          .eq("size_id", size.id)
+          .maybeSingle();
+        if (vErr) console.error(`[api/orders:${logId}] variant lookup error:`, vErr.message);
+        variant = v;
+      }
+
+      if (!variant) {
+        console.warn(`[api/orders:${logId}] Variant not matched for ${item.name}/${item.color}/${item.size}`);
+        continue;
+      }
+
+      const qty = item.quantity || 1;
+      const change = isDeduct ? -qty : qty;
+      const newStock = (variant.stock || 0) + change;
+
+      const { error: updErr } = await admin
         .from("product_variants")
         .update({ stock: newStock, updated_at: new Date().toISOString() })
         .eq("id", variant.id);
 
-      await admin
-        .from("inventory_logs")
-        .insert({
-          variant_id: variant.id,
-          change: -(item.quantity || 1),
-          reason: "order_processing",
-          order_id: orderId,
-        });
-
-      if (newStock < 0) {
-        sendWhatsAppRestockAlert(item.name || "Oversized Tee", item.color || "", item.size || "", newStock);
+      if (updErr) {
+        console.error(`[api/orders:${logId}] Failed to update variant ${variant.id}:`, updErr.message);
+        continue;
       }
 
-      console.log(`[api/orders:${logId}] Deducted ${item.quantity} from variant ${variant.id}: ${variant.stock} -> ${newStock}`);
+      const { error: logErr } = await admin
+        .from("inventory_logs")
+        .insert({ variant_id: variant.id, change, reason, order_id: orderId });
+
+      if (logErr) {
+        console.warn(`[api/orders:${logId}] inventory_logs insert failed (non-critical):`, logErr.message);
+      }
+
+      if (isDeduct && newStock < 0) {
+        sendWhatsAppRestockAlert(item.name || "Product", item.color || "", item.size || "", newStock);
+      }
+
+      console.log(`[api/orders:${logId}] ${isDeduct ? "Deducted" : "Restored"} ${qty} ${isDeduct ? "from" : "to"} variant ${variant.id}: ${variant.stock} -> ${newStock}`);
+      processed++;
     } catch (err) {
-      console.error(`[api/orders:${logId}] Failed to deduct stock for ${item.name}/${item.color}/${item.size}:`, err);
+      console.error(`[api/orders:${logId}] Unexpected error for ${item.name}/${item.color}/${item.size}:`, err);
     }
   }
+
+  console.log(`[api/orders:${logId}] updateStockForOrder complete: ${processed}/${items.length} items processed`);
+  return { processed, total: items.length };
 }
 
 export async function GET(request: NextRequest) {
@@ -195,12 +232,56 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Enrich items with variant_id for reliable stock deduction
+    const enrichedItems = await Promise.all(
+      (items || []).map(async (item: any) => {
+        const enriched = { ...item };
+        try {
+          const { data: product } = await admin
+            .from("products")
+            .select("id")
+            .ilike("name", item.name || "")
+            .maybeSingle();
+          if (product) {
+            const { data: color } = await admin
+              .from("product_colors")
+              .select("id")
+              .eq("product_id", product.id)
+              .ilike("name", item.color || "")
+              .maybeSingle();
+            if (color) {
+              const { data: size } = await admin
+                .from("product_sizes")
+                .select("id")
+                .ilike("label", item.size || "")
+                .maybeSingle();
+              if (size) {
+                const { data: variant } = await admin
+                  .from("product_variants")
+                  .select("id")
+                  .eq("product_id", product.id)
+                  .eq("color_id", color.id)
+                  .eq("size_id", size.id)
+                  .maybeSingle();
+                if (variant) {
+                  enriched.variant_id = variant.id;
+                }
+              }
+            }
+          }
+        } catch { /* non-critical enrichment */ }
+        return enriched;
+      })
+    );
+
+    console.log(`[api/orders:${logId}] Enriched ${enrichedItems.filter((i: any) => i.variant_id).length}/${enrichedItems.length} items with variant_id`);
+
     // Only use columns that exist in the actual DB schema
     const orderRow: Record<string, unknown> = {
       name: customer.name.trim(),
       phone: customer.phone.trim(),
       address: customer.address.trim(),
-      items: JSON.stringify(items),
+      items: JSON.stringify(enrichedItems),
       total,
       created_at: new Date().toISOString(),
     };
@@ -276,6 +357,35 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // Fetch current order (status + stock_processed) to determine lifecycle action
+    let currentStatus: string | null = null;
+    let stockProcessed = false;
+    if (status) {
+      const { data: currentOrder, error: fetchErr } = await admin
+        .from("orders")
+        .select("status, stock_processed")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (fetchErr) {
+        console.error(`[api/orders:${logId}] Failed to fetch current order:`, fetchErr.message);
+      } else if (currentOrder) {
+        currentStatus = currentOrder.status;
+        stockProcessed = currentOrder.stock_processed === true;
+      }
+    }
+
+    const statusChanged = status && currentStatus !== null && status !== currentStatus;
+    console.log(`[api/orders:${logId}] PATCH order ${id}: newStatus=${status}, oldStatus=${currentStatus}, stockProcessed=${stockProcessed}, statusChanged=${statusChanged}`);
+
+    // Compute lifecycle action based on OLD state
+    let needsDeduct = status === "processing" && !stockProcessed && statusChanged;
+    let needsRestore = status === "cancelled" && stockProcessed && statusChanged;
+    let isCompleted = status === "completed";
+
+    console.log(`[api/orders:${logId}] needsDeduct=${needsDeduct}, needsRestore=${needsRestore}, isCompleted=${isCompleted}`);
+
+    // Update order status + non-inventory fields first
     const updates: Record<string, unknown> = {};
     if (status) updates.status = status;
     if (internalNotes !== undefined) updates.internal_notes = internalNotes;
@@ -299,8 +409,31 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });
     }
 
-    if (status === "processing") {
-      await deductStockForOrder(admin, id as string, logId);
+    // --- Inventory lifecycle — runs AFTER status update ---
+    if (needsDeduct) {
+      console.log(`[api/orders:${logId}] Transition "${currentStatus}" → "processing" — deducting stock`);
+      const result = await updateStockForOrder(admin, id as string, logId, "deduct");
+      if (result.processed > 0) {
+        const { error: spErr } = await admin.from("orders").update({ stock_processed: true }).eq("id", id);
+        if (spErr) {
+          console.error(`[api/orders:${logId}] Failed to set stock_processed=true:`, spErr.message);
+        } else {
+          console.log(`[api/orders:${logId}] stock_processed=true set (${result.processed}/${result.total} items)`);
+        }
+      } else {
+        console.warn(`[api/orders:${logId}] Deduct processed 0/${result.total} items — stock_processed NOT set, retries will re-attempt`);
+      }
+    } else if (needsRestore) {
+      console.log(`[api/orders:${logId}] Transition "processing" → "cancelled" — restoring stock`);
+      const result = await updateStockForOrder(admin, id as string, logId, "restore");
+      if (result.processed > 0) {
+        const { error: spErr } = await admin.from("orders").update({ stock_processed: false }).eq("id", id);
+        if (spErr) {
+          console.error(`[api/orders:${logId}] Failed to set stock_processed=false:`, spErr.message);
+        }
+      }
+    } else if (isCompleted) {
+      console.log(`[api/orders:${logId}] Completed — no stock changes`);
     }
 
     return NextResponse.json({ success: true });
