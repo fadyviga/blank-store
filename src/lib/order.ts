@@ -9,18 +9,70 @@ async function apiFetch<T>(
   path: string,
   options?: RequestInit
 ): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
+  const url = `${API_BASE}${path}`;
 
-  const data = await res.json();
+  console.log(`[apiFetch] >>> ${options?.method || "GET"} ${url}`);
 
-  if (!res.ok) {
-    throw new Error(data.error || `Request failed: ${res.status}`);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
+    });
+  } catch (networkError) {
+    const message =
+      networkError instanceof Error ? networkError.message : "Network error";
+    console.error(`[apiFetch] NETWORK ERROR: ${url}`, message);
+    throw new Error(`Network request failed: ${message}`);
   }
 
-  return data;
+  console.log(`[apiFetch] <<< ${res.status} ${res.statusText} (${url})`);
+
+  if (!res.ok) {
+    let errorMessage = `Request failed with status ${res.status}`;
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      try {
+        const errorBody = await res.json();
+        errorMessage = errorBody.error || errorMessage;
+      } catch {
+        errorMessage = `Server returned ${res.status} with invalid JSON response`;
+      }
+    } else {
+      const textBody = await res.text().catch(() => "");
+      const preview = textBody.slice(0, 150).replace(/\s+/g, " ").trim();
+      console.error(`[apiFetch] NON-JSON ${res.status} response:`, preview);
+      if (res.status === 404) {
+        errorMessage =
+          "The server could not find the requested endpoint. If this persists, the API may not be deployed correctly.";
+      } else {
+        errorMessage = `Server error (${res.status}). Check server logs for details.`;
+      }
+    }
+    throw new Error(errorMessage);
+  }
+
+  const contentType = res.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    try {
+      const data: T = await res.json();
+      return data;
+    } catch (parseError) {
+      const text = await res.text().catch(() => "");
+      console.error(
+        `[apiFetch] JSON PARSE ERROR from ${url}:`,
+        text.slice(0, 200)
+      );
+      throw new Error(
+        `Invalid JSON response from server: ${text.slice(0, 100)}`
+      );
+    }
+  }
+
+  const text = await res.text();
+  throw new Error(
+    `Expected JSON response but got ${contentType || "unknown"}: ${text.slice(0, 100)}`
+  );
 }
 
 export async function saveOrder(order: {
@@ -36,10 +88,19 @@ export async function saveOrder(order: {
   subtotal: number;
   userId?: string;
 }): Promise<{ success: boolean; order?: Order }> {
-  const result = await apiFetch<{ success: boolean; order: Order }>("/orders", {
-    method: "POST",
-    body: JSON.stringify(order),
+  console.log("[saveOrder] Sending order to API:", {
+    customer: order.customer,
+    itemsCount: order.items.length,
+    subtotal: order.subtotal,
   });
+  const result = await apiFetch<{ success: boolean; order: Order }>(
+    "/orders",
+    {
+      method: "POST",
+      body: JSON.stringify(order),
+    }
+  );
+  console.log("[saveOrder] Response:", result);
   return result;
 }
 
@@ -75,7 +136,11 @@ export async function updateOrderStatus(
 
 export async function updateOrderDetails(
   id: string,
-  data: { status?: OrderStatus; internalNotes?: string; trackingNumber?: string }
+  data: {
+    status?: OrderStatus;
+    internalNotes?: string;
+    trackingNumber?: string;
+  }
 ): Promise<void> {
   await apiFetch("/orders", {
     method: "PATCH",

@@ -17,7 +17,7 @@ export async function GET() {
     const totalOrders = orders?.length || 0;
     const totalRevenue = orders?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
     const customers = new Set(
-      orders?.map((o) => o.customer_phone || o.user_id).filter(Boolean)
+      orders?.map((o) => o.phone || o.name || o.user_id).filter(Boolean)
     );
     const totalCustomers = customers.size;
 

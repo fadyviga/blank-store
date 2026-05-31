@@ -29,13 +29,13 @@ export async function GET() {
     >();
 
     orders?.forEach((o) => {
-      const key = o.customer_phone || o.user_id || o.id;
+      const key = o.phone || o.name || o.id;
       if (!customerMap.has(key)) {
         customerMap.set(key, {
-          id: o.user_id || o.id,
-          name: o.customer_name || "Unknown",
-          phone: o.customer_phone || "",
-          email: o.customer_email || "",
+          id: o.user_id || String(o.id),
+          name: o.name || o.customer_name || "Unknown",
+          phone: o.phone || o.customer_phone || "",
+          email: o.email || o.customer_email || "",
           totalOrders: 0,
           totalSpent: 0,
           firstOrder: o.created_at,

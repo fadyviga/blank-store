@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ShoppingBag, Loader2, Ruler } from "lucide-react";
 import { useCart } from "../hooks/useCart";
 import { useAuth } from "../context/AuthContext";
 import { saveOrder } from "../../lib/order";
 import SizeChart from "../components/SizeChart";
-import { DELIVERY_THRESHOLD, DELIVERY_FEE, BASE_PRICE } from "@/types";
+import { DELIVERY_THRESHOLD, DELIVERY_FEE } from "@/types";
 
 interface Errors {
   name?: string;
@@ -33,6 +33,7 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const [apiDiagnostics, setApiDiagnostics] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -64,6 +65,22 @@ export default function CheckoutPage() {
     setErrors(validate());
   };
 
+  const checkApiHealth = useCallback(async () => {
+    try {
+      const res = await fetch("/api/health");
+      const data = await res.json();
+      setApiDiagnostics(
+        `API: ${data.status}, DB: ${data.database?.configured ? "configured" : "missing key"}, URL: ${data.database?.url ? "ok" : "missing"}`
+      );
+    } catch {
+      setApiDiagnostics("API health check failed - endpoint unreachable");
+    }
+  }, []);
+
+  useEffect(() => {
+    checkApiHealth();
+  }, [checkApiHealth]);
+
   const placeOrder = async () => {
     setSubmitError("");
 
@@ -86,6 +103,7 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     try {
+      console.log("[Checkout] Calling saveOrder...");
       const result = await saveOrder({
         customer: {
           name: name.trim(),
@@ -104,6 +122,7 @@ export default function CheckoutPage() {
         subtotal: cartTotal,
         userId: user?.id,
       });
+      console.log("[Checkout] saveOrder returned:", result);
 
       if (!result.success) {
         setSubmitError("Failed to place order. Please try again.");
@@ -117,9 +136,9 @@ export default function CheckoutPage() {
       await new Promise((r) => setTimeout(r, 600));
       router.push(`/thanks?id=${displayId}`);
     } catch (ex) {
-      setSubmitError(
-        ex instanceof Error ? ex.message : "Something went wrong. Please try again."
-      );
+      const message = ex instanceof Error ? ex.message : "Something went wrong";
+      console.error("[Checkout] Order failed:", message);
+      setSubmitError(message);
       setIsSubmitting(false);
     }
   };
@@ -166,6 +185,12 @@ export default function CheckoutPage() {
         </button>
 
         <h1 className="text-4xl font-bold mb-8">Checkout</h1>
+
+        {apiDiagnostics && (
+          <div className="mb-4 text-[10px] font-mono text-zinc-600 bg-zinc-950 border border-white/5 rounded-xl px-4 py-2">
+            Diagnostics: {apiDiagnostics}
+          </div>
+        )}
 
         {!Array.isArray(cart) || cart.length === 0 ? (
           <div className="text-center py-20">

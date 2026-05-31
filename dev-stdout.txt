@@ -1,0 +1,9 @@
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3454
+- Network:       http://192.168.68.69:3454
+- Environments: .env.local
+✓ Ready in 339ms
+
+[api/orders:mptgrjs8] Inserting order with columns: [ 'name', 'phone', 'address', 'items', 'total', 'created_at' ]
+[api/orders:mptgrjs8] Order created: BLK-000003 (id=3)
+ POST /api/orders 200 in 1977ms (next.js: 139ms, application-code: 1838ms)
