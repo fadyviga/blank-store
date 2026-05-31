@@ -35,35 +35,63 @@ export async function POST(request: NextRequest) {
 
   try {
     let body: Record<string, unknown>;
+
     try {
       body = await request.json();
     } catch {
       return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
     }
 
-    const { supplier_name, notes, items, apply_to_all_sizes } = body as {
+    const {
+      supplier_name,
+      notes,
+      items,
+      apply_to_all_sizes,
+      created_at,
+    } = body as {
       supplier_name?: string;
       notes?: string;
-      items?: Array<{ product_id: string; color_id: string; size_id: string; quantity: number; unit_cost: number }>;
+      items?: Array<{
+        product_id: string;
+        color_id: string;
+        size_id: string;
+        quantity: number;
+        unit_cost: number;
+      }>;
       apply_to_all_sizes?: boolean;
+      created_at?: string;
     };
 
-    if (!supplier_name?.trim()) {
-      return NextResponse.json({ error: "supplier_name is required" }, { status: 400 });
-    }
+    // ✅ OPTIONAL supplier name
+    const cleanSupplier = supplier_name?.trim() || null;
+
+    // ✅ Manual or auto date
+    const purchaseDate = created_at
+      ? new Date(created_at).toISOString()
+      : new Date().toISOString();
+
     if (!items || !Array.isArray(items) || items.length === 0) {
-      return NextResponse.json({ error: "items array is required with at least one item" }, { status: 400 });
+      return NextResponse.json(
+        { error: "items array is required with at least one item" },
+        { status: 400 }
+      );
     }
 
     for (const [i, item] of items.entries()) {
-      if (!item.product_id) return NextResponse.json({ error: `items[${i}].product_id is required` }, { status: 400 });
-      if (!item.color_id) return NextResponse.json({ error: `items[${i}].color_id is required` }, { status: 400 });
+      if (!item.product_id)
+        return NextResponse.json({ error: `items[${i}].product_id is required` }, { status: 400 });
+
+      if (!item.color_id)
+        return NextResponse.json({ error: `items[${i}].color_id is required` }, { status: 400 });
+
       if (!apply_to_all_sizes && !item.size_id) {
         return NextResponse.json({ error: `items[${i}].size_id is required` }, { status: 400 });
       }
+
       if (!item.quantity || item.quantity < 1) {
         return NextResponse.json({ error: `items[${i}].quantity must be at least 1` }, { status: 400 });
       }
+
       if (!item.unit_cost || item.unit_cost < 0) {
         return NextResponse.json({ error: `items[${i}].unit_cost must be >= 0` }, { status: 400 });
       }
@@ -71,7 +99,6 @@ export async function POST(request: NextRequest) {
 
     const admin = getAdminClient();
 
-    // Expand items if apply_to_all_sizes is set
     let expandedItems: Array<{
       product_id: string;
       color_id: string;
@@ -113,42 +140,38 @@ export async function POST(request: NextRequest) {
       }));
     }
 
-    // Calculate total cost
     let total_cost = 0;
     for (const item of expandedItems) {
       total_cost += item.quantity * item.unit_cost;
     }
 
-    console.log(`[api/purchases:${logId}] Creating purchase: supplier="${supplier_name}", items=${expandedItems.length}, total_cost=${total_cost}`);
+    console.log(
+      `[api/purchases:${logId}] Creating purchase: supplier="${cleanSupplier}", items=${expandedItems.length}, total_cost=${total_cost}, date=${purchaseDate}`
+    );
 
-    // Insert purchase
     const { data: purchase, error: purchaseErr } = await admin
       .from("purchases")
       .insert({
-        supplier_name: supplier_name.trim(),
+        supplier_name: cleanSupplier,
         notes: notes || "",
         total_cost,
-        created_at: new Date().toISOString(),
+        created_at: purchaseDate,
       })
       .select()
       .maybeSingle();
 
     if (purchaseErr || !purchase) {
       const parsed = purchaseErr ? getResponseError(purchaseErr) : null;
-      if (parsed?.htmlResponse || parsed?.tableNotFound) {
-        return NextResponse.json(
-          { error: "Purchases table not found. Run business migration." },
-          { status: 500 }
-        );
-      }
+
       return NextResponse.json(
-        { error: parsed ? parsed.cleanedMessage : "Failed to create purchase" },
+        {
+          error: parsed ? parsed.cleanedMessage : "Failed to create purchase",
+        },
         { status: 500 }
       );
     }
 
     const purchaseId = purchase.id;
-    console.log(`[api/purchases:${logId}] Purchase created: id=${purchaseId}`);
 
     const createdItems: any[] = [];
     let stockUpdated = 0;
@@ -157,7 +180,6 @@ export async function POST(request: NextRequest) {
     for (const item of expandedItems) {
       const itemTotal = item.quantity * item.unit_cost;
 
-      // Insert purchase_item
       const { data: purchaseItem, error: itemErr } = await admin
         .from("purchase_items")
         .insert({
@@ -168,20 +190,18 @@ export async function POST(request: NextRequest) {
           quantity: item.quantity,
           unit_cost: item.unit_cost,
           total_cost: itemTotal,
-          created_at: new Date().toISOString(),
+          created_at: purchaseDate,
         })
         .select()
         .maybeSingle();
 
       if (itemErr) {
-        console.error(`[api/purchases:${logId}] Failed to insert purchase_item:`, itemErr.message);
         stockFailed++;
         continue;
       }
 
       createdItems.push(purchaseItem);
 
-      // Update product_variants stock
       const { data: variant, error: vErr } = await admin
         .from("product_variants")
         .select("id, stock")
@@ -190,28 +210,22 @@ export async function POST(request: NextRequest) {
         .eq("size_id", item.size_id)
         .maybeSingle();
 
-      if (vErr) {
-        console.error(`[api/purchases:${logId}] Variant lookup error:`, vErr.message);
-        stockFailed++;
-        continue;
-      }
-
-      if (!variant) {
-        console.warn(`[api/purchases:${logId}] No variant found for product=${item.product_id} color=${item.color_id} size=${item.size_id} — skipping stock update`);
+      if (vErr || !variant) {
         stockFailed++;
         continue;
       }
 
       const newStock = (variant.stock || 0) + item.quantity;
-      console.log(`[api/purchases:${logId}] Stock increase: variant=${variant.id} ${variant.stock} -> ${newStock} (+${item.quantity})`);
 
       const { error: updErr } = await admin
         .from("product_variants")
-        .update({ stock: newStock, updated_at: new Date().toISOString() })
+        .update({
+          stock: newStock,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", variant.id);
 
       if (updErr) {
-        console.error(`[api/purchases:${logId}] Stock update failed for variant ${variant.id}:`, updErr.message);
         stockFailed++;
         continue;
       }
@@ -219,13 +233,11 @@ export async function POST(request: NextRequest) {
       stockUpdated++;
     }
 
-    console.log(`[api/purchases:${logId}] Done: ${createdItems.length} items inserted, ${stockUpdated} stock updated, ${stockFailed} failures`);
-
     return NextResponse.json({
       success: true,
       purchase: {
         id: purchaseId,
-        supplier_name: purchase.supplier_name,
+        supplier_name: cleanSupplier,
         notes: purchase.notes,
         total_cost,
         created_at: purchase.created_at,
@@ -247,18 +259,20 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
-    if (!id) return NextResponse.json({ error: "Purchase ID is required" }, { status: 400 });
+
+    if (!id) {
+      return NextResponse.json({ error: "Purchase ID is required" }, { status: 400 });
+    }
 
     const admin = getAdminClient();
 
-    console.log(`[api/purchases:${logId}] DELETE purchase id=${id} (items will cascade, stock NOT restored)`);
+    const { error } = await admin
+      .from("purchases")
+      .delete()
+      .eq("id", id);
 
-    const { error } = await admin.from("purchases").delete().eq("id", id);
     if (error) {
       const parsed = getResponseError(error);
-      if (parsed.tableNotFound) {
-        return NextResponse.json({ error: "Purchases table not found" }, { status: 500 });
-      }
       return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });
     }
 
