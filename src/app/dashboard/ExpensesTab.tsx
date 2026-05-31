@@ -97,7 +97,10 @@ export default function ExpensesTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editingExpense ? { id: editingExpense, ...form } : form),
       });
-      if (!res.ok) throw new Error("Failed to save expense");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to save expense");
+      }
       showToast(`Expense ${editingExpense ? "updated" : "created"} successfully`, "success");
       setShowModal(false);
       fetchExpenses();

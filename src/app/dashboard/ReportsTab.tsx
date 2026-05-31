@@ -60,7 +60,15 @@ export default function ReportsTab() {
         throw new Error(err.error || "Failed to fetch reports");
       }
       const json = await res.json();
-      setData(json);
+      if (!json?.summary) {
+        throw new Error(json.error || "Invalid reports response");
+      }
+      setData({
+        summary: json.summary,
+        revenueOverTime: json.revenueOverTime ?? [],
+        expensesOverTime: json.expensesOverTime ?? [],
+        ordersOverTime: json.ordersOverTime ?? [],
+      });
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Failed to load reports", "error");
     }
@@ -136,7 +144,7 @@ export default function ReportsTab() {
         </div>
       )}
 
-      {!loading && data && (
+      {!loading && data?.summary && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             <MetricCard

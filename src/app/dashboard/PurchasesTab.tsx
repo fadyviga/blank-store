@@ -57,6 +57,7 @@ export default function PurchasesTab() {
     { productId: "", colorId: "", sizeId: "", quantity: 1, unitCost: 0 },
   ]);
   const [applyToAllSizes, setApplyToAllSizes] = useState(false);
+  const [purchaseDate, setPurchaseDate] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -132,25 +133,13 @@ export default function PurchasesTab() {
       return;
     }
 
-    let expandedItems: { productId: string; colorId: string; sizeId: string; quantity: number; unitCost: number }[] = [];
-
-    for (const item of items) {
-      if (!item.productId || !item.colorId) continue;
-      if (applyToAllSizes) {
-        for (const size of sizes) {
-          expandedItems.push({ ...item, sizeId: size.id, quantity: item.quantity || 1 });
-        }
-      } else {
-        if (!item.sizeId) {
-          showToast("Please select a size for all items", "error");
-          return;
-        }
-        expandedItems.push({ ...item, quantity: item.quantity || 1 });
-      }
-    }
-
-    if (expandedItems.length === 0) {
+    const lineItems = items.filter((i) => i.productId && i.colorId);
+    if (lineItems.length === 0) {
       showToast("Please fill in item details", "error");
+      return;
+    }
+    if (!applyToAllSizes && lineItems.some((i) => !i.sizeId)) {
+      showToast("Please select a size for all items", "error");
       return;
     }
 
@@ -162,11 +151,13 @@ export default function PurchasesTab() {
         body: JSON.stringify({
           supplier: supplier.trim(),
           notes: notes.trim() || undefined,
-          items: expandedItems.map((i) => ({
+          apply_to_all_sizes: applyToAllSizes,
+          created_at: purchaseDate || undefined,
+          items: lineItems.map((i) => ({
             productId: i.productId,
             colorId: i.colorId,
-            sizeId: i.sizeId,
-            quantity: i.quantity,
+            sizeId: applyToAllSizes ? undefined : i.sizeId,
+            quantity: i.quantity || 1,
             unitCost: i.unitCost,
           })),
         }),
@@ -181,6 +172,7 @@ export default function PurchasesTab() {
       setNotes("");
       setItems([{ productId: "", colorId: "", sizeId: "", quantity: 1, unitCost: 0 }]);
       setApplyToAllSizes(false);
+      setPurchaseDate("");
       fetchPurchases();
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Failed to create purchase", "error");
@@ -241,6 +233,15 @@ export default function PurchasesTab() {
                 rows={1}
                 placeholder="Any notes about this purchase"
                 className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30 transition resize-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1.5">Purchase Date (optional)</label>
+              <input
+                type="date"
+                value={purchaseDate}
+                onChange={(e) => setPurchaseDate(e.target.value)}
+                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30 transition"
               />
             </div>
           </div>

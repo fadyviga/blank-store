@@ -1,6 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase-admin";
 
+const PERIOD_ALIASES: Record<string, string> = {
+  today: "today",
+  week: "week",
+  this_week: "week",
+  month: "month",
+  this_month: "month",
+  lastMonth: "lastMonth",
+  last_month: "lastMonth",
+  year: "year",
+  this_year: "year",
+  custom: "custom",
+  all: "all",
+};
+
+function emptySummary() {
+  return {
+    totalRevenue: 0,
+    totalExpenses: 0,
+    inventoryCost: 0,
+    grossProfit: 0,
+    netProfit: 0,
+    totalOrders: 0,
+    avgOrderValue: 0,
+  };
+}
+
 function getDateRange(period: string, startDate?: string, endDate?: string): { start: string; end: string } {
   const now = new Date();
   const end = endDate || now.toISOString().split("T")[0];
@@ -54,12 +80,12 @@ function daysBetween(a: string, b: string): number {
 }
 
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const period = searchParams.get("period") || "all";
-    const startDate = searchParams.get("startDate") || undefined;
-    const endDate = searchParams.get("endDate") || undefined;
+  const rawPeriod = new URL(request.url).searchParams.get("period") || "all";
+  const period = PERIOD_ALIASES[rawPeriod] || "all";
+  const startDate = new URL(request.url).searchParams.get("startDate") || undefined;
+  const endDate = new URL(request.url).searchParams.get("endDate") || undefined;
 
+  try {
     const { start, end } = getDateRange(period, startDate, endDate);
     const rangeDays = daysBetween(start, end);
 
@@ -68,104 +94,91 @@ export async function GET(request: NextRequest) {
       admin = getAdminClient();
     } catch (configErr) {
       const msg = configErr instanceof Error ? configErr.message : "Supabase not configured";
+      console.error("[api/reports] Config error:", msg);
       return NextResponse.json({ error: msg }, { status: 500 });
     }
 
-    // 1. Revenue — completed orders in range
     let revenue = 0;
     let totalOrders = 0;
-    let orders: any[] = [];
     let revenueOverTime: { date: string; value: number }[] = [];
     let ordersOverTime: { date: string; value: number }[] = [];
 
-    try {
-      const { data, error } = await admin
-        .from("orders")
-        .select("total, created_at, status")
-        .eq("status", "completed")
-        .gte("created_at", `${start}T00:00:00`)
-        .lte("created_at", `${end}T23:59:59`)
-        .order("created_at", { ascending: true });
+    const { data: orderData, error: orderErr } = await admin
+      .from("orders")
+      .select("total, created_at, status")
+      .eq("status", "completed")
+      .gte("created_at", `${start}T00:00:00`)
+      .lte("created_at", `${end}T23:59:59`)
+      .order("created_at", { ascending: true });
 
-      if (!error && data) {
-        orders = data;
-        totalOrders = data.length;
-        revenue = data.reduce((sum, o) => sum + (o.total || 0), 0);
+    if (orderErr) {
+      console.error("[api/reports] Orders query error:", orderErr.message);
+    } else if (orderData) {
+      totalOrders = orderData.length;
+      revenue = orderData.reduce((sum, o) => sum + (o.total || 0), 0);
 
-        const revBuckets: Record<string, number> = {};
-        const ordBuckets: Record<string, number> = {};
-        for (const o of data) {
-          const bucket = getBucket(o.created_at?.split("T")[0] || "", rangeDays);
-          revBuckets[bucket] = (revBuckets[bucket] || 0) + (o.total || 0);
-          ordBuckets[bucket] = (ordBuckets[bucket] || 0) + 1;
-        }
-        revenueOverTime = Object.entries(revBuckets)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([date, value]) => ({ date, value }));
-        ordersOverTime = Object.entries(ordBuckets)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([date, value]) => ({ date, value }));
+      const revBuckets: Record<string, number> = {};
+      const ordBuckets: Record<string, number> = {};
+      for (const o of orderData) {
+        const bucket = getBucket(o.created_at?.split("T")[0] || "", rangeDays);
+        revBuckets[bucket] = (revBuckets[bucket] || 0) + (o.total || 0);
+        ordBuckets[bucket] = (ordBuckets[bucket] || 0) + 1;
       }
-    } catch {
-      // orders table may not exist
+      revenueOverTime = Object.entries(revBuckets)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, value]) => ({ date, value }));
+      ordersOverTime = Object.entries(ordBuckets)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, value]) => ({ date, value }));
     }
 
-    // 2. COGS — purchases in range
     let cogs = 0;
-    try {
-      const { data, error } = await admin
-        .from("purchases")
-        .select("total_cost, created_at")
-        .gte("created_at", `${start}T00:00:00`)
-        .lte("created_at", `${end}T23:59:59`);
+    const { data: purchaseData, error: purchaseErr } = await admin
+      .from("purchases")
+      .select("total_cost, created_at")
+      .gte("created_at", `${start}T00:00:00`)
+      .lte("created_at", `${end}T23:59:59`);
 
-      if (!error && data) {
-        cogs = data.reduce((sum, p) => sum + (p.total_cost || 0), 0);
-      }
-    } catch {
-      // purchases table may not exist
+    if (purchaseErr) {
+      console.error("[api/reports] Purchases query error:", purchaseErr.message);
+    } else if (purchaseData) {
+      cogs = purchaseData.reduce((sum, p) => sum + (p.total_cost || 0), 0);
     }
 
-    // 3. Expenses in range
     let expenses = 0;
     let expensesOverTime: { date: string; value: number }[] = [];
-    try {
-      const { data, error } = await admin
-        .from("expenses")
-        .select("amount, date")
-        .gte("date", start)
-        .lte("date", end)
-        .order("date", { ascending: true });
+    const { data: expenseData, error: expenseErr } = await admin
+      .from("expenses")
+      .select("amount, date")
+      .gte("date", start)
+      .lte("date", end)
+      .order("date", { ascending: true });
 
-      if (!error && data) {
-        expenses = data.reduce((sum, e) => sum + (e.amount || 0), 0);
+    if (expenseErr) {
+      console.error("[api/reports] Expenses query error:", expenseErr.message);
+    } else if (expenseData) {
+      expenses = expenseData.reduce((sum, e) => sum + (e.amount || 0), 0);
 
-        const expBuckets: Record<string, number> = {};
-        for (const e of data) {
-          const bucket = getBucket(e.date || "", rangeDays);
-          expBuckets[bucket] = (expBuckets[bucket] || 0) + (e.amount || 0);
-        }
-        expensesOverTime = Object.entries(expBuckets)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([date, value]) => ({ date, value }));
+      const expBuckets: Record<string, number> = {};
+      for (const e of expenseData) {
+        const bucket = getBucket(e.date || "", rangeDays);
+        expBuckets[bucket] = (expBuckets[bucket] || 0) + (e.amount || 0);
       }
-    } catch {
-      // expenses table may not exist
+      expensesOverTime = Object.entries(expBuckets)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, value]) => ({ date, value }));
     }
 
-    // 4. Inventory Value
     let inventoryValue = 0;
-    try {
-      const { data, error } = await admin
-        .from("product_variants")
-        .select("stock, cost_price")
-        .gt("cost_price", 0);
+    const { data: variantData, error: variantErr } = await admin
+      .from("product_variants")
+      .select("stock, cost_price")
+      .gt("cost_price", 0);
 
-      if (!error && data) {
-        inventoryValue = data.reduce((sum, v) => sum + ((v.stock || 0) * v.cost_price), 0);
-      }
-    } catch {
-      // product_variants table may not exist
+    if (variantErr) {
+      console.error("[api/reports] Variants query error:", variantErr.message);
+    } else if (variantData) {
+      inventoryValue = variantData.reduce((sum, v) => sum + ((v.stock || 0) * v.cost_price), 0);
     }
 
     const grossProfit = revenue - cogs;
@@ -174,6 +187,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       summary: {
+        ...emptySummary(),
         totalRevenue: revenue,
         totalExpenses: expenses,
         inventoryCost: inventoryValue,
@@ -185,10 +199,12 @@ export async function GET(request: NextRequest) {
       revenueOverTime,
       expensesOverTime,
       ordersOverTime,
-      period,
+      period: rawPeriod,
+      dateRange: { start, end },
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[api/reports] Unhandled error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
