@@ -52,13 +52,17 @@ export async function POST(request: NextRequest) {
 
     if (apply_to_all_sizes) {
       for (const item of safeItems) {
-        const { data: sizes } = await admin.from("product_sizes").select("id");
+        const { data: existingVariants } = await admin
+          .from("product_variants")
+          .select("size_id")
+          .eq("product_id", item?.product_id || 0)
+          .eq("color_id", item?.color_id || 0);
 
-        for (const size of sizes || []) {
+        for (const v of existingVariants || []) {
           expandedItems.push({
             product_id: item?.product_id || null,
             color_id: item?.color_id || null,
-            size_id: size.id,
+            size_id: v.size_id,
             quantity: Number(item?.quantity || 0),
             unit_cost: Number(item?.unit_cost || 0),
           });
@@ -88,7 +92,12 @@ export async function POST(request: NextRequest) {
         created_at: purchaseDate,
       })
       .select()
-      .single();
+      .maybeSingle();
+
+    if (!purchase) {
+      console.error(`[api/purchases:${logId}] Purchase insert returned no data`);
+      return NextResponse.json({ error: "Failed to create purchase record" }, { status: 500 });
+    }
 
     const purchaseId = purchase.id;
 
@@ -100,7 +109,7 @@ export async function POST(request: NextRequest) {
     for (const item of expandedItems) {
       const itemTotal = (item.quantity || 0) * (item.unit_cost || 0);
 
-      const { data: purchaseItem } = await admin
+      const { data: purchaseItem, error: itemErr } = await admin
         .from("purchase_items")
         .insert({
           purchase_id: purchaseId,
@@ -113,20 +122,31 @@ export async function POST(request: NextRequest) {
           created_at: purchaseDate,
         })
         .select()
-        .single();
+        .maybeSingle();
+
+      if (itemErr) {
+        console.error(`[api/purchases:${logId}] purchase_items insert error:`, itemErr);
+        return NextResponse.json({ error: `Failed to insert purchase item: ${itemErr.message}` }, { status: 500 });
+      }
 
       createdItems.push(purchaseItem);
 
-      const { data: variant } = await admin
+      const { data: variant, error: variantErr } = await admin
         .from("product_variants")
         .select("id, stock")
         .eq("product_id", item.product_id)
         .eq("color_id", item.color_id)
         .eq("size_id", item.size_id)
-        .single();
+        .maybeSingle();
+
+      if (variantErr) {
+        console.error(`[api/purchases:${logId}] Variant lookup error for item:`, variantErr);
+        stockFailed++;
+        continue;
+      }
 
       if (variant) {
-        await admin
+        const { error: updateErr } = await admin
           .from("product_variants")
           .update({
             stock: (variant.stock || 0) + (item.quantity || 0),
@@ -134,7 +154,12 @@ export async function POST(request: NextRequest) {
           })
           .eq("id", variant.id);
 
-        stockUpdated++;
+        if (updateErr) {
+          console.error(`[api/purchases:${logId}] Stock update error for variant ${variant.id}:`, updateErr);
+          stockFailed++;
+        } else {
+          stockUpdated++;
+        }
       } else {
         stockFailed++;
       }
@@ -154,6 +179,7 @@ export async function POST(request: NextRequest) {
       stock_failed: stockFailed,
     });
   } catch (err: unknown) {
+    console.error(`[api/purchases:${logId}] Unhandled error:`, err);
     return NextResponse.json(
       { error: (err as Error).message },
       { status: 500 }

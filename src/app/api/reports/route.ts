@@ -173,14 +173,15 @@ export async function GET(request: NextRequest) {
     const averageOrderValue = totalOrders > 0 ? revenue / totalOrders : 0;
 
     return NextResponse.json({
-      revenue,
-      cogs,
-      expenses,
-      inventoryValue,
-      grossProfit,
-      netProfit,
-      totalOrders,
-      averageOrderValue,
+      summary: {
+        totalRevenue: revenue,
+        totalExpenses: expenses,
+        inventoryCost: inventoryValue,
+        grossProfit,
+        netProfit,
+        totalOrders,
+        avgOrderValue: averageOrderValue,
+      },
       revenueOverTime,
       expensesOverTime,
       ordersOverTime,
