@@ -26,6 +26,7 @@ import {
   DollarSign,
   Receipt,
   HandCoins,
+  Tag,
 } from "lucide-react";
 import {
   loadOrders,
@@ -41,6 +42,8 @@ import ExpensesTab from "./ExpensesTab";
 import ReportsTab from "./ReportsTab";
 import PartnersTab from "./PartnersTab";
 import TreasuryTab from "./TreasuryTab";
+import DiscountsTab from "./DiscountsTab";
+import AnalyticsTab from "./AnalyticsTab";
 
 type Tab =
   | "overview"
@@ -54,7 +57,8 @@ type Tab =
   | "expenses"
   | "reports"
   | "partners"
-  | "treasury";
+  | "treasury"
+  | "discounts";
 
 export default function DashboardPage() {
   const handleLogout = () => {
@@ -112,6 +116,7 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
     { key: "expenses", label: "Expenses", icon: <Receipt size={16} /> },
     { key: "reports", label: "Reports", icon: <BarChart3 size={16} /> },
     { key: "partners", label: "Partners", icon: <HandCoins size={16} /> },
+    { key: "discounts", label: "Discounts", icon: <Tag size={16} /> },
     { key: "treasury", label: "Treasury", icon: <Wallet size={16} /> },
   ];
 
@@ -128,7 +133,7 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
       case "customers":
         return <CustomersTab orders={orders} />;
       case "analytics":
-        return <AnalyticsTab orders={orders} />;
+        return <AnalyticsTab />;
       case "restock":
         return <RestockTab />;
       case "purchases":
@@ -139,6 +144,8 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
         return <ReportsTab />;
       case "partners":
         return <PartnersTab />;
+      case "discounts":
+        return <DiscountsTab />;
       case "treasury":
         return <TreasuryTab />;
     }
@@ -207,7 +214,7 @@ function OverviewTab({
   const recentOrders = useMemo(() => orders.slice(0, 5), [orders]);
   const [treasuryBalance, setTreasuryBalance] = useState<number | null>(null);
   const [salesData, setSalesData] = useState<{ totalUnitsSold: number; totalSalesValue: number; topSellingProducts: { productName: string; unitsSold: number; salesValue: number }[] } | null>(null);
-  const [inventoryData, setInventoryData] = useState<{ totalStock: number; lowStockVariants: { productName: string; stock: number }[] } | null>(null);
+  const [inventoryData, setInventoryData] = useState<{ totalStock: number } | null>(null);
 
   useEffect(() => {
     fetch("/api/treasury")
@@ -226,8 +233,6 @@ function OverviewTab({
   }, []);
 
   const topSelling = useMemo(() => (salesData?.topSellingProducts || []).slice(0, 5), [salesData]);
-  const bestSelling = useMemo(() => salesData?.topSellingProducts?.[0] ?? null, [salesData]);
-  const lowStockItems = useMemo(() => (inventoryData?.lowStockVariants || []).slice(0, 5), [inventoryData]);
 
   return (
     <div className="space-y-8">
@@ -242,108 +247,49 @@ function OverviewTab({
           </p>
         </div>
       )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard icon={<ShoppingBag size={24} />} label="Total Orders" value={stats.totalOrders} />
-        <StatCard icon={<Wallet size={24} />} label="Revenue" value={`${stats.totalRevenue.toLocaleString()} EGP`} />
         <StatCard icon={<Users size={24} />} label="Customers" value={stats.totalCustomers} />
+        <StatCard icon={<Wallet size={24} />} label="Total Sales" value={salesData ? `${salesData.totalSalesValue.toLocaleString()} EGP` : "—"} />
         <StatCard
           icon={<AlertTriangle size={24} />}
-          label="Pending"
+          label="Pending Orders"
           value={stats.pendingOrders}
           highlight={stats.pendingOrders > 0}
         />
       </div>
 
-      {/* Sales Overview */}
-      <div>
-        <h2 className="text-xl font-bold mb-4">Sales Overview</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-          <StatCard icon={<Wallet size={24} />} label="Total Sales (EGP)" value={salesData ? `${salesData.totalSalesValue.toLocaleString()} EGP` : "—"} />
-          <StatCard icon={<ShoppingBag size={24} />} label="Total Units Sold" value={salesData?.totalUnitsSold ?? "—"} />
-          <StatCard icon={<TrendingUp size={24} />} label="Best Selling Product" value={bestSelling ? bestSelling.productName : "—"} />
-          <StatCard icon={<Package size={24} />} label="Best Seller Units" value={bestSelling ? bestSelling.unitsSold : "—"} />
-        </div>
-
-        {/* Sales by Product Chart */}
-        <div className="bg-zinc-950 border border-white/10 rounded-2xl p-5">
-          <h3 className="font-bold text-sm mb-4">Sales by Product</h3>
-          {topSelling.length === 0 ? (
-            <p className="text-zinc-500 text-xs py-4 text-center">No sales data yet</p>
-          ) : (
-            <div className="space-y-3">
-              {topSelling.map((item, i) => {
-                const maxValue = Math.max(...topSelling.map((p) => p.salesValue));
-                const pct = maxValue > 0 ? (item.salesValue / maxValue) * 100 : 0;
-                return (
-                  <div key={i}>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-zinc-300">{item.productName}</span>
-                      <span className="text-zinc-400">{item.unitsSold} units &middot; {item.salesValue.toLocaleString()} EGP</span>
-                    </div>
-                    <div className="h-2.5 bg-zinc-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-white rounded-full" style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <StatCard icon={<Package size={24} />} label="Units Sold" value={salesData?.totalUnitsSold ?? "—"} />
+        <StatCard icon={<Package size={24} />} label="Total Stock Available" value={inventoryData?.totalStock ?? "—"} />
+        <StatCard icon={<TrendingUp size={24} />} label="Top Product Units" value={topSelling.length > 0 ? topSelling[0].unitsSold : "—"} />
       </div>
 
-      {/* Inventory Overview */}
-      <div>
-        <h2 className="text-xl font-bold mb-4">Inventory Overview</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-          <StatCard icon={<Package size={24} />} label="Total Products Sold" value={salesData?.totalUnitsSold ?? "—"} />
-          <StatCard icon={<Package size={24} />} label="Total Stock Available" value={inventoryData?.totalStock ?? "—"} />
-          <StatCard icon={<TrendingUp size={24} />} label="Top Seller Qty" value={topSelling.length > 0 ? topSelling[0].unitsSold : "—"} />
-          <StatCard
-            icon={<AlertTriangle size={24} />}
-            label="Low Stock Items"
-            value={lowStockItems.length}
-            highlight={lowStockItems.length > 0}
-          />
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Top Selling Products */}
-          <div className="bg-zinc-950 border border-white/10 rounded-2xl p-5">
-            <h3 className="font-bold text-sm mb-3">Top Selling Products</h3>
-            {topSelling.length === 0 ? (
-              <p className="text-zinc-500 text-xs py-4 text-center">No sales data yet</p>
-            ) : (
-              <div className="space-y-2">
-                {topSelling.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between border-b border-white/5 pb-2 last:border-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-zinc-500 text-xs w-4">{i + 1}.</span>
-                      <span className="text-sm">{item.productName}</span>
-                    </div>
-                    <span className="text-sm font-bold">{item.unitsSold}</span>
+      {/* Sales by Product Chart */}
+      <div className="bg-zinc-950 border border-white/10 rounded-2xl p-5">
+        <h2 className="text-xl font-bold mb-4">Sales by Product</h2>
+        {topSelling.length === 0 ? (
+          <p className="text-zinc-500 text-sm py-8 text-center">No sales data yet</p>
+        ) : (
+          <div className="space-y-3">
+            {topSelling.map((item, i) => {
+              const maxValue = Math.max(...topSelling.map((p) => p.salesValue));
+              const pct = maxValue > 0 ? (item.salesValue / maxValue) * 100 : 0;
+              return (
+                <div key={i}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-zinc-300">{item.productName}</span>
+                    <span className="text-zinc-400">{item.unitsSold} units &middot; {item.salesValue.toLocaleString()} EGP</span>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Low Stock Products */}
-          <div className="bg-zinc-950 border border-white/10 rounded-2xl p-5">
-            <h3 className="font-bold text-sm mb-3">Low Stock Products</h3>
-            {lowStockItems.length === 0 ? (
-              <p className="text-zinc-500 text-xs py-4 text-center">All products well-stocked</p>
-            ) : (
-              <div className="space-y-2">
-                {lowStockItems.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between border-b border-white/5 pb-2 last:border-0">
-                    <span className="text-sm">{item.productName}</span>
-                    <span className="text-sm font-bold text-yellow-400">{item.stock} left</span>
+                  <div className="h-3 bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-white rounded-full transition-all" style={{ width: `${pct}%` }} />
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              );
+            })}
           </div>
-        </div>
+        )}
       </div>
 
       <div>
@@ -1342,6 +1288,11 @@ function InventoryTab() {
   const [sizes, setSizes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingVariant, setUpdatingVariant] = useState<string | null>(null);
+  const [bulkProductId, setBulkProductId] = useState("");
+  const [bulkColorId, setBulkColorId] = useState("");
+  const [bulkAmount, setBulkAmount] = useState(1);
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [showBulk, setShowBulk] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -1387,6 +1338,34 @@ function InventoryTab() {
 
   const updating = (id: string) => updatingVariant === id;
 
+  const applyBulkStock = async () => {
+    if (!bulkProductId || !bulkColorId || bulkAmount < 1) {
+      showToast("Please select a product, color, and enter a valid amount", "error");
+      return;
+    }
+    setBulkUpdating(true);
+    try {
+      const res = await fetch("/api/inventory/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product_id: bulkProductId, color_id: bulkColorId, amount: bulkAmount }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update stock");
+      setVariants((prev: any[]) =>
+        prev.map((v: any) => {
+          const match = data.results?.find((r: any) => r.id === v.id);
+          return match ? { ...v, stock: match.new_stock } : v;
+        })
+      );
+      showToast(`Added ${bulkAmount} to ${data.updatedCount} variant(s)`, "success");
+      setShowBulk(false);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to update stock", "error");
+    }
+    setBulkUpdating(false);
+  };
+
   if (loading) return <div className="flex justify-center py-10"><Loader2 size={24} className="animate-spin text-zinc-500" /></div>;
 
   const lowStockVariants = variants
@@ -1401,6 +1380,52 @@ function InventoryTab() {
         <StatCard icon={<Package size={24} />} label="Total Variants" value={variants.length} />
         <StatCard icon={<AlertTriangle size={24} />} label="Low Stock (≤5)" value={lowStockVariants.length} highlight={lowStockVariants.length > 0} />
         <StatCard icon={<AlertTriangle size={24} />} label="Out of Stock" value={outOfStockVariants.length} highlight={outOfStockVariants.length > 0} />
+      </div>
+
+      <div className="bg-zinc-950 border border-white/10 rounded-2xl">
+        <button
+          onClick={() => setShowBulk(!showBulk)}
+          className="w-full flex items-center justify-between p-4 text-sm font-medium transition hover:bg-white/5"
+        >
+          <span className="flex items-center gap-2"><Package size={16} /> Bulk Stock Update</span>
+          <ChevronDown size={16} className={`transition-transform ${showBulk ? "rotate-180" : ""}`} />
+        </button>
+        {showBulk && (
+          <div className="px-4 pb-4 space-y-3 border-t border-white/10 pt-3">
+            <div className="grid md:grid-cols-4 gap-3">
+              <select
+                value={bulkProductId}
+                onChange={(e) => { setBulkProductId(e.target.value); setBulkColorId(""); }}
+                className="bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="">Select Product</option>
+                {products.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              <select
+                value={bulkColorId}
+                onChange={(e) => setBulkColorId(e.target.value)}
+                className="bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="">Select Color</option>
+                {colors.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <input
+                type="number"
+                min={1}
+                value={bulkAmount}
+                onChange={(e) => setBulkAmount(Math.max(1, Number(e.target.value)))}
+                className="bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-sm"
+              />
+              <button
+                onClick={applyBulkStock}
+                disabled={bulkUpdating}
+                className="bg-white text-black rounded-lg px-4 py-2 text-sm font-semibold hover:bg-zinc-200 transition disabled:opacity-50"
+              >
+                {bulkUpdating ? <Loader2 size={14} className="animate-spin inline-block" /> : "Apply to All Sizes"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {outOfStockVariants.length > 0 && (
@@ -1649,121 +1674,6 @@ function CustomersTab({ orders }: { orders: Order[] }) {
             )}
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function AnalyticsTab({ orders }: { orders: Order[] }) {
-  const stats = useMemo(() => {
-    function sumItems(items: any[]): number {
-      return (items || []).reduce(
-        (s: number, item: any) => s + (Number(item.price) || 0) * (Number(item.quantity) || 1),
-        0
-      );
-    }
-
-    const completed = orders.filter((o) => o.status === "completed");
-    const cancelled = orders.filter((o) => o.status === "cancelled");
-    const totalRevenue = completed.reduce((s, o) => s + sumItems(o.items), 0);
-    const itemSales: Record<string, { name: string; qty: number; revenue: number }> = {};
-
-    orders.forEach((o) => {
-      o.items?.forEach((item: any) => {
-        const key = `${item.name}-${item.color}-${item.size}`;
-        if (!itemSales[key]) {
-          itemSales[key] = { name: `${item.name} (${item.color}/${item.size})`, qty: 0, revenue: 0 };
-        }
-        itemSales[key].qty += item.quantity || 0;
-        itemSales[key].revenue += (item.price || 0) * (item.quantity || 0);
-      });
-    });
-
-    const bestSellers = Object.values(itemSales).sort((a, b) => b.qty - a.qty);
-
-    const monthly: Record<string, number> = {};
-    orders.forEach((o) => {
-      if (o.status !== "cancelled") {
-        const month = o.createdAt?.slice(0, 7);
-        if (month) {
-          monthly[month] = (monthly[month] || 0) + sumItems(o.items);
-        }
-      }
-    });
-    const monthlyRevenue = Object.entries(monthly)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, revenue]) => ({ month, revenue }));
-
-    return {
-      totalRevenue,
-      completedOrders: completed.length,
-      cancelledOrders: cancelled.length,
-      conversionRate: orders.length ? ((completed.length / orders.length) * 100).toFixed(1) : "0",
-      bestSellers: bestSellers.slice(0, 10),
-      monthlyRevenue,
-    };
-  }, [orders]);
-
-  return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard icon={<Wallet size={24} />} label="Total Revenue" value={`${stats.totalRevenue.toLocaleString()} EGP`} />
-        <StatCard icon={<ShoppingBag size={24} />} label="Completed Orders" value={stats.completedOrders} />
-        <StatCard icon={<TrendingUp size={24} />} label="Conversion" value={`${stats.conversionRate}%`} />
-        <StatCard icon={<AlertTriangle size={24} />} label="Cancelled" value={stats.cancelledOrders} />
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-8">
-        <div>
-          <h3 className="font-bold mb-4">Monthly Revenue</h3>
-          <div className="bg-zinc-950 border border-white/10 rounded-2xl p-5">
-            {stats.monthlyRevenue.length === 0 ? (
-              <p className="text-zinc-500 text-sm text-center py-8">No data yet</p>
-            ) : (
-              <div className="space-y-3">
-                {stats.monthlyRevenue.map((m) => {
-                  const maxRevenue = Math.max(...stats.monthlyRevenue.map((r) => r.revenue));
-                  const pct = maxRevenue > 0 ? (m.revenue / maxRevenue) * 100 : 0;
-                  return (
-                    <div key={m.month}>
-                      <div className="flex justify-between text-xs text-zinc-400 mb-1">
-                        <span>{new Date(m.month + "-01").toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</span>
-                        <span>{m.revenue.toLocaleString()} EGP</span>
-                      </div>
-                      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-white rounded-full" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="font-bold mb-4">Best Selling Items</h3>
-          <div className="bg-zinc-950 border border-white/10 rounded-2xl p-5">
-            {stats.bestSellers.length === 0 ? (
-              <p className="text-zinc-500 text-sm text-center py-8">No data yet</p>
-            ) : (
-              <div className="space-y-3">
-                {stats.bestSellers.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between border-b border-white/5 pb-2 last:border-0">
-                    <div className="flex items-center gap-3">
-                      <span className="text-zinc-500 text-xs w-5">{i + 1}.</span>
-                      <span className="text-sm">{item.name}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-sm font-bold">{item.qty}</span>
-                      <span className="text-xs text-zinc-500 ml-2">units</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   );
