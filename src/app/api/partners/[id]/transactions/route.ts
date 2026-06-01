@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient, getResponseError } from "@/lib/supabase-admin";
-import { generateSnapshot } from "../../_utils";
+import { generateSnapshot, computeCapital } from "../../_utils";
 
 export async function GET(
   _request: NextRequest,
@@ -36,14 +36,21 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const body = await request.json();
+
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
+    }
+
     const { amount, type } = body;
 
     if (!amount || Number(amount) <= 0) {
       return NextResponse.json({ error: "Amount must be greater than 0" }, { status: 400 });
     }
 
-    if (!type || !["deposit", "withdraw"].includes(type)) {
+    if (!type || !["deposit", "withdraw"].includes(type as string)) {
       return NextResponse.json({ error: "Type must be 'deposit' or 'withdraw'" }, { status: 400 });
     }
 
@@ -60,9 +67,7 @@ export async function POST(
     }
 
     if (type === "withdraw") {
-      const { capitalByPartner } = await (
-        await import("../../_utils")
-      ).computeCapital(admin);
+      const { capitalByPartner } = await computeCapital(admin);
       const currentCapital = capitalByPartner[id] || 0;
       if (Number(amount) > currentCapital) {
         return NextResponse.json(
@@ -91,6 +96,6 @@ export async function POST(
 
     return NextResponse.json(tx, { status: 201 });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "Invalid JSON" }, { status: 400 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) || "Server error" }, { status: 400 });
   }
 }

@@ -54,10 +54,16 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
+    }
+
     const { name, initialCapital } = body;
 
-    if (!name || !name.trim()) {
+    if (!name || !(name as string).trim()) {
       return NextResponse.json({ error: "Partner name is required" }, { status: 400 });
     }
 
@@ -66,7 +72,7 @@ export async function POST(request: NextRequest) {
     const { data: existing } = await admin
       .from("partners")
       .select("id")
-      .eq("name", name.trim())
+      .eq("name", (name as string).trim())
       .maybeSingle();
 
     if (existing) {
@@ -75,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     const { data: partner, error: createErr } = await admin
       .from("partners")
-      .insert({ name: name.trim() })
+      .insert({ name: (name as string).trim() })
       .select()
       .single();
 
@@ -103,6 +109,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(partner, { status: 201 });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "Invalid JSON" }, { status: 400 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) || "Server error" }, { status: 400 });
   }
 }
