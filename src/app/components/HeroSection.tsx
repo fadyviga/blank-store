@@ -15,7 +15,7 @@ export default function HeroSection() {
   }, []);
 
   return (
-    <section className="relative min-h-screen w-full overflow-hidden bg-[#000]">
+    <section className="relative h-auto w-full overflow-hidden bg-[#000]">
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="w-[500px] h-[500px] sm:w-[700px] sm:h-[700px] rounded-full bg-white/[0.015] blur-[150px] animate-spotlight" />
       </div>
