@@ -13,7 +13,7 @@ export async function GET(
       .from("partner_capital_transactions")
       .select("*")
       .eq("partner_id", id)
-      .order("transaction_date", { ascending: false });
+      .order("created_at", { ascending: false });
 
     if (error) {
       const parsed = getResponseError(error);
@@ -36,13 +36,10 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { amount, note, contribution_date } = body;
+    const { amount, notes } = body;
 
     if (!amount || amount <= 0) {
       return NextResponse.json({ error: "Amount must be greater than 0" }, { status: 400 });
-    }
-    if (!contribution_date) {
-      return NextResponse.json({ error: "Contribution date is required" }, { status: 400 });
     }
 
     const admin = getAdminClient();
@@ -61,10 +58,9 @@ export async function POST(
       .from("partner_capital_transactions")
       .insert({
         partner_id: id,
-        type: "contribution",
+        type: "deposit",
         amount: Number(amount),
-        note: note || null,
-        transaction_date: contribution_date,
+        notes: notes || null,
       })
       .select()
       .single();

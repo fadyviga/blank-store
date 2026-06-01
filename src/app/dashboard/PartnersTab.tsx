@@ -23,32 +23,17 @@ interface Partner {
   name: string;
   currentCapital: number;
   ownershipPercentage: number;
-  totalProfitEarned: number;
-  lastUpdated: string;
-  created_at: string;
   hasTransactions: boolean;
+  created_at: string;
 }
 
 interface CapitalTransaction {
   id: string;
   partner_id: string;
-  type: "initial" | "contribution" | "withdrawal";
+  type: "deposit" | "withdraw";
   amount: number;
-  note: string | null;
-  transaction_date: string;
+  notes: string | null;
   created_at: string;
-}
-
-interface ProfitDistribution {
-  id: string;
-  partner_id: string;
-  period_start: string;
-  period_end: string;
-  net_profit: number;
-  ownership_percentage: number;
-  profit_share: number;
-  distributed_at: string;
-  partners?: { name: string };
 }
 
 type Period = "this_month" | "last_month" | "this_year" | "custom";
@@ -94,14 +79,12 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
   const [loading, setLoading] = useState(true);
   const [addCapitalModal, setAddCapitalModal] = useState<{ partnerId: string; partnerName: string } | null>(null);
   const [amount, setAmount] = useState("");
-  const [note, setNote] = useState("");
-  const [contributionDate, setContributionDate] = useState(new Date().toISOString().slice(0, 10));
+  const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const [showAddPartner, setShowAddPartner] = useState(false);
   const [newPartnerName, setNewPartnerName] = useState("");
   const [initialCapital, setInitialCapital] = useState("");
-  const [initialCapitalDate, setInitialCapitalDate] = useState(new Date().toISOString().slice(0, 10));
   const [addingPartner, setAddingPartner] = useState(false);
 
   const [editPartner, setEditPartner] = useState<{ id: string; name: string } | null>(null);
@@ -114,7 +97,7 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
       const res = await fetch("/api/partners");
       const data = await res.json();
       setPartners(Array.isArray(data) ? data : (data.data || []));
-    } catch (err) {
+    } catch {
       showToast("Failed to load partners", "error");
     }
     setLoading(false);
@@ -131,16 +114,12 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
       showToast("Amount must be greater than 0", "error");
       return;
     }
-    if (!contributionDate) {
-      showToast("Contribution date is required", "error");
-      return;
-    }
     setSubmitting(true);
     try {
       const res = await fetch(`/api/partners/${addCapitalModal.partnerId}/contributions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: amt, note: note || null, contribution_date: contributionDate }),
+        body: JSON.stringify({ amount: amt, notes: notes || null }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -149,7 +128,7 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
       showToast("Capital added successfully", "success");
       setAddCapitalModal(null);
       setAmount("");
-      setNote("");
+      setNotes("");
       fetchPartners();
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Failed to add capital", "error");
@@ -175,7 +154,6 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
         body: JSON.stringify({
           name: newPartnerName.trim(),
           initialCapital: cap > 0 ? cap : 0,
-          initialCapitalDate: cap > 0 ? initialCapitalDate : undefined,
         }),
       });
       if (!res.ok) {
@@ -244,7 +222,7 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 flex-1">
           <StatCard icon={<Users size={24} />} label="Total Partners" value={partners.length} />
           <StatCard
             icon={<Wallet size={24} />}
@@ -253,11 +231,6 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
           />
           <StatCard
             icon={<TrendingUp size={24} />}
-            label="Total Profit Distributed"
-            value={`${partners.reduce((s, p) => s + p.totalProfitEarned, 0).toLocaleString()} EGP`}
-          />
-          <StatCard
-            icon={<BarChart3 size={24} />}
             label="Avg Ownership"
             value={partners.length ? `${(100 / partners.length).toFixed(1)}%` : "0%"}
           />
@@ -281,15 +254,13 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
               <th className="text-left py-3 text-zinc-500 font-medium">Partner</th>
               <th className="text-right py-3 text-zinc-500 font-medium">Current Capital</th>
               <th className="text-right py-3 text-zinc-500 font-medium">Ownership %</th>
-              <th className="text-right py-3 text-zinc-500 font-medium">Total Profit Earned</th>
-              <th className="text-right py-3 text-zinc-500 font-medium">Last Updated</th>
               <th className="text-right py-3 text-zinc-500 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {partners.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-10 text-zinc-500">No partners yet. Click "Add Partner" to create one.</td>
+                <td colSpan={4} className="text-center py-10 text-zinc-500">No partners yet. Click "Add Partner" to create one.</td>
               </tr>
             ) : (
               partners.map((p) => (
@@ -297,10 +268,6 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
                   <td className="py-3 font-medium">{p.name}</td>
                   <td className="py-3 text-right">{p.currentCapital.toLocaleString()} EGP</td>
                   <td className="py-3 text-right">{(p.ownershipPercentage * 100).toFixed(2)}%</td>
-                  <td className="py-3 text-right text-green-400">{p.totalProfitEarned.toLocaleString()} EGP</td>
-                  <td className="py-3 text-right text-zinc-400 text-xs">
-                    {p.lastUpdated ? new Date(p.lastUpdated).toLocaleDateString("en-GB") : "-"}
-                  </td>
                   <td className="py-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
                       <button
@@ -356,23 +323,13 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
                 />
               </div>
               <div>
-                <label className="block text-xs text-zinc-400 mb-1.5">Date</label>
-                <input
-                  type="date"
-                  value={contributionDate}
-                  onChange={(e) => setContributionDate(e.target.value)}
-                  max={new Date().toISOString().slice(0, 10)}
-                  className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30 transition"
-                />
-              </div>
-              <div>
                 <label className="block text-xs text-zinc-400 mb-1.5">Notes</label>
                 <input
                   type="text"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
                   className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30 transition"
-                  placeholder="e.g. Initial investment"
+                  placeholder="e.g. Additional investment"
                 />
               </div>
               <div className="flex gap-3 pt-2">
@@ -428,18 +385,6 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
                   placeholder="e.g. 50000"
                 />
               </div>
-              {initialCapital && Number(initialCapital) > 0 && (
-                <div>
-                  <label className="block text-xs text-zinc-400 mb-1.5">Date</label>
-                  <input
-                    type="date"
-                    value={initialCapitalDate}
-                    onChange={(e) => setInitialCapitalDate(e.target.value)}
-                    max={new Date().toISOString().slice(0, 10)}
-                    className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30 transition"
-                  />
-                </div>
-              )}
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={handleAddPartner}
@@ -527,8 +472,8 @@ function CapitalHistoryView({ showToast }: { showToast: (msg: string, type: "suc
             allTx.push(...data);
           }
         }
-        setTransactions(allTx.sort((a, b) => b.transaction_date.localeCompare(a.transaction_date)));
-      } catch (err) {
+        setTransactions(allTx.sort((a, b) => b.created_at.localeCompare(a.created_at)));
+      } catch {
         showToast("Failed to load capital history", "error");
       }
       setLoading(false);
@@ -546,9 +491,8 @@ function CapitalHistoryView({ showToast }: { showToast: (msg: string, type: "suc
 
   const typeLabel = (t: CapitalTransaction) => {
     switch (t.type) {
-      case "initial": return <span className="text-blue-400">Initial</span>;
-      case "contribution": return <span className="text-green-400">Contribution</span>;
-      case "withdrawal": return <span className="text-red-400">Withdrawal</span>;
+      case "deposit": return <span className="text-green-400">Deposit</span>;
+      case "withdraw": return <span className="text-red-400">Withdraw</span>;
     }
   };
 
@@ -576,7 +520,7 @@ function CapitalHistoryView({ showToast }: { showToast: (msg: string, type: "suc
               <th className="text-left py-3 text-zinc-500 font-medium">Type</th>
               <th className="text-right py-3 text-zinc-500 font-medium">Amount</th>
               <th className="text-left py-3 text-zinc-500 font-medium">Date</th>
-              <th className="text-left py-3 text-zinc-500 font-medium">Note</th>
+              <th className="text-left py-3 text-zinc-500 font-medium">Notes</th>
             </tr>
           </thead>
           <tbody>
@@ -592,8 +536,8 @@ function CapitalHistoryView({ showToast }: { showToast: (msg: string, type: "suc
                     <td className="py-3 font-medium">{partner?.name || "Unknown"}</td>
                     <td className="py-3">{typeLabel(t)}</td>
                     <td className="py-3 text-right">{t.amount.toLocaleString()} EGP</td>
-                    <td className="py-3 text-zinc-300">{new Date(t.transaction_date).toLocaleDateString("en-GB")}</td>
-                    <td className="py-3 text-zinc-400 text-xs max-w-[200px] truncate">{t.note || "-"}</td>
+                    <td className="py-3 text-zinc-300">{new Date(t.created_at).toLocaleDateString("en-GB")}</td>
+                    <td className="py-3 text-zinc-400 text-xs max-w-[200px] truncate">{t.notes || "-"}</td>
                   </tr>
                 );
               })
@@ -606,7 +550,6 @@ function CapitalHistoryView({ showToast }: { showToast: (msg: string, type: "suc
 }
 
 function ProfitDistributionView({ showToast }: { showToast: (msg: string, type: "success" | "error") => void }) {
-  const [distributions, setDistributions] = useState<ProfitDistribution[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [distributing, setDistributing] = useState(false);
@@ -614,6 +557,14 @@ function ProfitDistributionView({ showToast }: { showToast: (msg: string, type: 
   const [period, setPeriod] = useState<Period>("this_month");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+
+  const [result, setResult] = useState<{
+    periodStart: string;
+    periodEnd: string;
+    netProfit: number;
+    totalCapital: number;
+    distributions: { partner_id: string; partner_name: string; capital: number; ownershipPercentage: number; profitShare: number }[];
+  } | null>(null);
 
   const getDateRange = (p: Period): { start: string; end: string } => {
     const now = new Date();
@@ -636,39 +587,20 @@ function ProfitDistributionView({ showToast }: { showToast: (msg: string, type: 
     }
   };
 
-  const fetchDistributions = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [pRes] = await Promise.all([fetch("/api/partners")]);
-      const pData = await pRes.json();
-      const partnersList = Array.isArray(pData) ? pData : (pData.data || []);
-      setPartners(partnersList);
-
-      const { start, end } = period === "custom"
-        ? { start: startDate, end: endDate }
-        : getDateRange(period);
-
-      const allDistributions: ProfitDistribution[] = [];
-      for (const p of partnersList) {
-        const params = new URLSearchParams();
-        if (start) params.set("periodStart", start);
-        if (end) params.set("periodEnd", end);
-        const res = await fetch(`/api/partners/${p.id}/profit-distributions?${params.toString()}`);
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          allDistributions.push(...data);
-        }
-      }
-      setDistributions(allDistributions.sort((a, b) => b.distributed_at.localeCompare(a.distributed_at)));
-    } catch (err) {
-      showToast("Failed to load profit distributions", "error");
-    }
-    setLoading(false);
-  }, [period, startDate, endDate, showToast]);
-
   useEffect(() => {
-    fetchDistributions();
-  }, [fetchDistributions]);
+    const fetchPartners = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/partners");
+        const data = await res.json();
+        setPartners(Array.isArray(data) ? data : (data.data || []));
+      } catch {
+        showToast("Failed to load partners", "error");
+      }
+      setLoading(false);
+    };
+    fetchPartners();
+  }, [showToast]);
 
   const handleDistributeProfit = async () => {
     const { start, end } = period === "custom"
@@ -681,6 +613,7 @@ function ProfitDistributionView({ showToast }: { showToast: (msg: string, type: 
     }
 
     setDistributing(true);
+    setResult(null);
     try {
       const reportRes = await fetch(`/api/reports?periodStart=${start}&periodEnd=${end}`);
       if (!reportRes.ok) throw new Error("Failed to fetch reports");
@@ -704,8 +637,9 @@ function ProfitDistributionView({ showToast }: { showToast: (msg: string, type: 
         throw new Error(err.error || "Failed to distribute profit");
       }
 
-      showToast("Profit distributed successfully", "success");
-      fetchDistributions();
+      const data = await res.json();
+      setResult(data);
+      showToast("Profit calculated successfully", "success");
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Failed to distribute profit", "error");
     }
@@ -713,22 +647,12 @@ function ProfitDistributionView({ showToast }: { showToast: (msg: string, type: 
   };
 
   const today = new Date().toISOString().slice(0, 10);
-
   const periods: { key: Period; label: string }[] = [
     { key: "this_month", label: "This Month" },
     { key: "last_month", label: "Last Month" },
     { key: "this_year", label: "This Year" },
     { key: "custom", label: "Custom" },
   ];
-
-  const grouped = distributions.reduce<Record<string, { period: string; items: ProfitDistribution[] }>>((acc, d) => {
-    const key = `${d.period_start}_${d.period_end}`;
-    if (!acc[key]) {
-      acc[key] = { period: `${new Date(d.period_start).toLocaleDateString("en-GB")} — ${new Date(d.period_end).toLocaleDateString("en-GB")}`, items: [] };
-    }
-    acc[key].items.push(d);
-    return acc;
-  }, {});
 
   if (loading) {
     return <div className="flex justify-center py-10"><Loader2 size={24} className="animate-spin text-zinc-500" /></div>;
@@ -740,7 +664,7 @@ function ProfitDistributionView({ showToast }: { showToast: (msg: string, type: 
         {periods.map((p) => (
           <button
             key={p.key}
-            onClick={() => { setPeriod(p.key); if (p.key !== "custom") { setStartDate(""); setEndDate(""); } }}
+            onClick={() => { setPeriod(p.key); if (p.key !== "custom") { setStartDate(""); setEndDate(""); } setResult(null); }}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap ${
               period === p.key
                 ? "bg-white text-black"
@@ -777,58 +701,53 @@ function ProfitDistributionView({ showToast }: { showToast: (msg: string, type: 
           className="ml-auto flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition disabled:opacity-50"
         >
           {distributing ? <Loader2 size={16} className="animate-spin" /> : <HandCoins size={16} />}
-          Distribute Profit
+          Calculate Distribution
         </button>
       </div>
 
-      {Object.keys(grouped).length === 0 ? (
+      {!result ? (
         <div className="text-center py-16">
           <BarChart3 size={48} className="mx-auto text-zinc-700 mb-4" />
-          <p className="text-zinc-500">No profit distributions yet</p>
-          <p className="text-zinc-600 text-sm mt-2">Select a period and click "Distribute Profit"</p>
+          <p className="text-zinc-500">No profit distribution calculated yet</p>
+          <p className="text-zinc-600 text-sm mt-2">Select a period and click "Calculate Distribution"</p>
         </div>
       ) : (
-        Object.entries(grouped).map(([key, group]) => {
-          const totalProfit = group.items.reduce((s, d) => s + d.net_profit, 0);
-          const totalDistributed = group.items.reduce((s, d) => s + d.profit_share, 0);
-          return (
-            <div key={key} className="bg-zinc-950 border border-white/10 rounded-2xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-sm">{group.period}</h3>
-                <div className="text-right">
-                  <p className="text-xs text-zinc-400">Net Profit: <span className="text-green-400 font-bold">{totalProfit.toLocaleString()} EGP</span></p>
-                  <p className="text-xs text-zinc-400">Distributed: <span className="text-white font-bold">{totalDistributed.toLocaleString()} EGP</span></p>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="text-left py-2 text-zinc-500 font-medium">Partner</th>
-                      <th className="text-right py-2 text-zinc-500 font-medium">Ownership %</th>
-                      <th className="text-right py-2 text-zinc-500 font-medium">Profit Share</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {group.items.map((d) => {
-                      const partner = partners.find((p) => p.id === d.partner_id);
-                      return (
-                        <tr key={d.id} className="border-b border-white/5">
-                          <td className="py-2 font-medium">{partner?.name || "Unknown"}</td>
-                          <td className="py-2 text-right">{(d.ownership_percentage * 100).toFixed(2)}%</td>
-                          <td className="py-2 text-right text-green-400 font-bold">{d.profit_share.toLocaleString()} EGP</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              <p className="text-[10px] text-zinc-600 mt-3">
-                Distributed: {group.items[0]?.distributed_at ? new Date(group.items[0].distributed_at).toLocaleString("en-GB") : "-"}
-              </p>
+        <div className="bg-zinc-950 border border-white/10 rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-sm">
+              {new Date(result.periodStart).toLocaleDateString("en-GB")} — {new Date(result.periodEnd).toLocaleDateString("en-GB")}
+            </h3>
+            <div className="text-right">
+              <p className="text-xs text-zinc-400">Total Capital: <span className="text-white font-bold">{result.totalCapital.toLocaleString()} EGP</span></p>
+              <p className="text-xs text-zinc-400">Net Profit: <span className="text-green-400 font-bold">{result.netProfit.toLocaleString()} EGP</span></p>
             </div>
-          );
-        })
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="text-left py-2 text-zinc-500 font-medium">Partner</th>
+                  <th className="text-right py-2 text-zinc-500 font-medium">Capital</th>
+                  <th className="text-right py-2 text-zinc-500 font-medium">Ownership %</th>
+                  <th className="text-right py-2 text-zinc-500 font-medium">Profit Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.distributions.map((d) => {
+                  const partner = partners.find((p) => p.id === d.partner_id);
+                  return (
+                    <tr key={d.partner_id} className="border-b border-white/5">
+                      <td className="py-2 font-medium">{partner?.name || d.partner_name}</td>
+                      <td className="py-2 text-right">{d.capital.toLocaleString()} EGP</td>
+                      <td className="py-2 text-right">{(d.ownershipPercentage * 100).toFixed(2)}%</td>
+                      <td className="py-2 text-right text-green-400 font-bold">{d.profitShare.toLocaleString()} EGP</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -838,20 +757,18 @@ function StatCard({
   icon,
   label,
   value,
-  highlight,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string | number;
-  highlight?: boolean;
 }) {
   return (
     <div className="bg-zinc-950 border border-white/10 rounded-2xl p-5">
       <div className="flex items-center justify-between mb-3">
-        <span className={highlight ? "text-red-400" : "text-zinc-400"}>{icon}</span>
+        <span className="text-zinc-400">{icon}</span>
         <span className="text-zinc-500 text-xs">{label}</span>
       </div>
-      <p className={`text-2xl font-bold ${highlight ? "text-red-400" : ""}`}>{value}</p>
+      <p className="text-2xl font-bold">{value}</p>
     </div>
   );
 }

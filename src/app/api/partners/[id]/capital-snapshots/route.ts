@@ -13,7 +13,7 @@ export async function GET(
       .from("partner_capital_transactions")
       .select("*")
       .eq("partner_id", id)
-      .order("transaction_date", { ascending: false });
+      .order("created_at", { ascending: false });
 
     if (error) {
       const parsed = getResponseError(error);

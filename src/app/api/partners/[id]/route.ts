@@ -23,28 +23,22 @@ export async function GET(
       return NextResponse.json({ error: parsed.cleanedMessage }, { status: 404 });
     }
 
-    const { data: tx } = await admin
-      .from("partner_capital_transactions")
-      .select("amount")
-      .eq("partner_id", id);
-
     const { data: allTx } = await admin
       .from("partner_capital_transactions")
-      .select("partner_id, amount");
+      .select("partner_id, amount, type");
 
-    const { data: distributions } = await admin
-      .from("profit_distributions")
-      .select("profit_share");
-
-    const partnerCapital = (tx || []).reduce((s, t) => s + Number(t.amount), 0);
-    const totalCapital = (allTx || []).reduce((s, t) => s + Number(t.amount), 0);
-    const totalProfitEarned = (distributions || []).reduce((s, d) => s + Number(d.profit_share), 0);
+    let partnerCapital = 0;
+    let totalCapital = 0;
+    for (const tx of allTx || []) {
+      const delta = tx.type === "deposit" ? Number(tx.amount) : -Number(tx.amount);
+      if (tx.partner_id === id) partnerCapital += delta;
+      totalCapital += delta;
+    }
 
     return NextResponse.json({
       ...partner,
       currentCapital: partnerCapital,
       ownershipPercentage: totalCapital > 0 ? partnerCapital / totalCapital : 0,
-      totalProfitEarned,
     });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });

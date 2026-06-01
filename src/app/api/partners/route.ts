@@ -20,34 +20,14 @@ export async function GET() {
 
     const { data: allTx } = await admin
       .from("partner_capital_transactions")
-      .select("partner_id, amount");
-
-    const { data: allProfitDist } = await admin
-      .from("profit_distributions")
-      .select("profit_share, partner_id");
-
-    const { data: latestTx } = await admin
-      .from("partner_capital_transactions")
-      .select("partner_id, transaction_date")
-      .order("transaction_date", { ascending: false });
+      .select("partner_id, amount, type");
 
     const capitalByPartner: Record<string, number> = {};
     let totalCapital = 0;
     for (const tx of allTx || []) {
-      capitalByPartner[tx.partner_id] = (capitalByPartner[tx.partner_id] || 0) + Number(tx.amount);
-      totalCapital += Number(tx.amount);
-    }
-
-    const profitByPartner: Record<string, number> = {};
-    for (const d of allProfitDist || []) {
-      profitByPartner[d.partner_id] = (profitByPartner[d.partner_id] || 0) + Number(d.profit_share);
-    }
-
-    const latestTxByPartner: Record<string, string> = {};
-    for (const tx of latestTx || []) {
-      if (!latestTxByPartner[tx.partner_id]) {
-        latestTxByPartner[tx.partner_id] = tx.transaction_date;
-      }
+      const delta = tx.type === "deposit" ? Number(tx.amount) : -Number(tx.amount);
+      capitalByPartner[tx.partner_id] = (capitalByPartner[tx.partner_id] || 0) + delta;
+      totalCapital += delta;
     }
 
     const enriched = (partners || []).map((partner) => {
@@ -56,9 +36,7 @@ export async function GET() {
         ...partner,
         currentCapital,
         ownershipPercentage: totalCapital > 0 ? currentCapital / totalCapital : 0,
-        totalProfitEarned: profitByPartner[partner.id] || 0,
-        lastUpdated: latestTxByPartner[partner.id] || partner.created_at,
-        hasTransactions: currentCapital > 0,
+        hasTransactions: currentCapital !== 0,
       };
     });
 
@@ -101,17 +79,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (initialCapital && Number(initialCapital) > 0) {
-      const capitalAmount = Number(initialCapital);
-      const date = initialCapitalDate || new Date().toISOString().slice(0, 10);
-
       await admin
         .from("partner_capital_transactions")
         .insert({
           partner_id: partner.id,
-          type: "initial",
-          amount: capitalAmount,
-          note: initialCapitalNote || "Initial capital",
-          transaction_date: date,
+          type: "deposit",
+          amount: Number(initialCapital),
+          notes: initialCapitalNote || "Initial capital",
         });
     }
 

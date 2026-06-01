@@ -30,40 +30,36 @@ export async function POST(request: NextRequest) {
 
     const { data: allTx } = await admin
       .from("partner_capital_transactions")
-      .select("partner_id, amount")
-      .lte("transaction_date", periodStart);
+      .select("partner_id, amount, type")
+      .lte("created_at", periodEnd);
 
     const capitalByPartner: Record<string, number> = {};
     let totalCapital = 0;
     for (const tx of allTx || []) {
-      capitalByPartner[tx.partner_id] = (capitalByPartner[tx.partner_id] || 0) + Number(tx.amount);
-      totalCapital += Number(tx.amount);
+      const delta = tx.type === "deposit" ? Number(tx.amount) : -Number(tx.amount);
+      capitalByPartner[tx.partner_id] = (capitalByPartner[tx.partner_id] || 0) + delta;
+      totalCapital += delta;
     }
 
-    const distributions = partners.map((partner) => {
+    const result = partners.map((partner) => {
       const partnerCapital = capitalByPartner[partner.id] || 0;
       const ownershipPct = totalCapital > 0 ? partnerCapital / totalCapital : 0;
       return {
         partner_id: partner.id,
-        period_start: periodStart,
-        period_end: periodEnd,
-        net_profit: Number(netProfit),
-        ownership_percentage: Math.round(ownershipPct * 10000) / 10000,
-        profit_share: Number((Number(netProfit) * ownershipPct).toFixed(2)),
+        partner_name: partner.name,
+        capital: partnerCapital,
+        ownershipPercentage: ownershipPct,
+        profitShare: Number((Number(netProfit) * ownershipPct).toFixed(2)),
       };
     });
 
-    const { data: inserted, error: insErr } = await admin
-      .from("profit_distributions")
-      .insert(distributions)
-      .select("*, partners(name)");
-
-    if (insErr) {
-      const parsed = getResponseError(insErr);
-      return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });
-    }
-
-    return NextResponse.json(inserted, { status: 201 });
+    return NextResponse.json({
+      periodStart,
+      periodEnd,
+      netProfit: Number(netProfit),
+      totalCapital,
+      distributions: result,
+    });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Invalid JSON" }, { status: 400 });
   }
