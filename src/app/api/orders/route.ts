@@ -386,6 +386,8 @@ export async function POST(request: NextRequest) {
       phone: customer.phone.trim(),
       address: customer.address.trim(),
       items: JSON.stringify(enrichedItems),
+      subtotal: subtotal || 0,
+      delivery,
       total,
       created_at: new Date().toISOString(),
     };

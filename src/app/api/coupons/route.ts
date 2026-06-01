@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       const parsed = getResponseError(error);
       if (parsed.tableNotFound || parsed.htmlResponse) {
         console.error(`[api/coupons:${logId}] Coupons table not found: ${parsed.cleanedMessage}`);
-        return NextResponse.json({ valid: false });
+        return NextResponse.json({ valid: false, error: "Invalid discount code" });
       }
       console.error(`[api/coupons:${logId}] Query error: ${parsed.cleanedMessage}`);
       return NextResponse.json({ valid: false, error: "Invalid discount code" });
@@ -59,11 +59,11 @@ export async function POST(request: NextRequest) {
 
     if (discountType === "fixed" && typeof orderTotal === "number" && discountValue > orderTotal) {
       console.log(`[api/coupons:${logId}] Discount ${discountValue} exceeds orderTotal ${orderTotal}`);
-      return NextResponse.json({ valid: false, error: "Discount exceeds order total" });
+      return NextResponse.json({ valid: false, error: "Invalid discount code" });
     }
 
     console.log(`[api/coupons:${logId}] Coupon valid: id=${coupon.id}, type=${discountType}, value=${discountValue}`);
-    return NextResponse.json({ valid: true, discountType, discountValue });
+    return NextResponse.json({ valid: true, discountType, discountValue: Number(discountValue) });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error(`[api/coupons:${logId}] Unhandled error:`, message);

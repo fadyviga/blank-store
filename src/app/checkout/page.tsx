@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ShoppingBag, Loader2, Ruler, Tag, XCircle } from "lucide-react";
 import { useCart } from "../hooks/useCart";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../components/Toast";
 import { saveOrder } from "../../lib/order";
 import SizeChart from "../components/SizeChart";
 import { DELIVERY_THRESHOLD, DELIVERY_FEE } from "@/types";
@@ -32,6 +33,7 @@ export default function CheckoutPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountValue: number } | null>(null);
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (user) {
@@ -85,20 +87,26 @@ export default function CheckoutPage() {
     setCouponError("");
     setAppliedCoupon(null);
     try {
+      console.log("[Checkout] Applying coupon:", couponCode.trim(), "orderTotal:", cartTotal + delivery);
       const res = await fetch("/api/coupons", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: couponCode.trim(), orderTotal: cartTotal + delivery }),
       });
       const data = await res.json();
+      console.log("[Checkout] Coupon response:", data);
       if (data.valid) {
         setAppliedCoupon({ code: couponCode.trim(), discountValue: data.discountValue });
         setCouponCode("");
+        showToast(`Coupon applied! You saved ${data.discountValue} EGP`, "success");
       } else {
-        setCouponError(data.error || "Invalid discount code");
+        const errMsg = data.error || "Invalid discount code";
+        setCouponError(errMsg);
+        showToast(errMsg, "error");
       }
     } catch {
       setCouponError("Could not validate coupon");
+      showToast("Could not validate coupon", "error");
     }
     setCouponLoading(false);
   };
@@ -125,8 +133,7 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     try {
-      console.log("[Checkout] Calling saveOrder...");
-      const result = await saveOrder({
+      const payload = {
         customer: {
           name: name.trim(),
           phone: phone.trim(),
@@ -144,8 +151,14 @@ export default function CheckoutPage() {
         subtotal: cartTotal,
         userId: user?.id,
         couponCode: appliedCoupon?.code,
-        discountAmount: discount || undefined,
+        discountAmount: discount > 0 ? discount : undefined,
+      };
+      console.log("[Checkout] Calling saveOrder with payload:", {
+        ...payload,
+        couponCode: payload.couponCode,
+        discountAmount: payload.discountAmount,
       });
+      const result = await saveOrder(payload);
       console.log("[Checkout] saveOrder returned:", result);
 
       if (!result.success) {
@@ -155,6 +168,7 @@ export default function CheckoutPage() {
       }
 
       clearCart();
+      showToast("Order placed successfully!", "success");
 
       const displayId = result.order?.displayId || "";
       await new Promise((r) => setTimeout(r, 600));
@@ -361,30 +375,30 @@ export default function CheckoutPage() {
                       <span className="text-sm text-green-400 font-medium">
                         {appliedCoupon.code}: -{appliedCoupon.discountValue} EGP
                       </span>
-                      <button onClick={removeCoupon} className="text-green-400 hover:text-green-300">
+                      <button onClick={removeCoupon} className="text-green-400 hover:text-green-300 shrink-0 ml-3">
                         <XCircle size={16} />
                       </button>
                     </div>
                   ) : (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-stretch">
                       <input
                         type="text"
                         placeholder="Enter discount code"
                         value={couponCode}
                         onChange={(e) => { setCouponCode(e.target.value); setCouponError(""); }}
-                        className="flex-1 bg-black border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30"
+                        className="flex-1 min-w-0 bg-black border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30"
                       />
                       <button
                         onClick={applyCoupon}
                         disabled={couponLoading || !couponCode.trim()}
-                        className="px-4 py-3 bg-white text-black rounded-xl text-sm font-medium hover:scale-[1.02] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="shrink-0 px-5 py-3 bg-white text-black rounded-xl text-sm font-medium hover:scale-[1.02] transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {couponLoading ? <Loader2 size={16} className="animate-spin" /> : "Apply"}
                       </button>
                     </div>
                   )}
                   {couponError && (
-                    <p className="text-red-400 text-xs">{couponError}</p>
+                    <p className="text-red-400 text-xs mt-1">{couponError}</p>
                   )}
                 </div>
 
