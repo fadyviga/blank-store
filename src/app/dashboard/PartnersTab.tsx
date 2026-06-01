@@ -12,6 +12,9 @@ import {
   History,
   TrendingUp,
   HandCoins,
+  Edit3,
+  Trash2,
+  Save,
 } from "lucide-react";
 import { useToast } from "../components/Toast";
 
@@ -23,6 +26,7 @@ interface Partner {
   totalProfitEarned: number;
   lastUpdated: string;
   created_at: string;
+  hasTransactions: boolean;
 }
 
 interface CapitalSnapshot {
@@ -33,15 +37,6 @@ interface CapitalSnapshot {
   effective_from: string;
   effective_to: string | null;
   is_current: boolean;
-  created_at: string;
-}
-
-interface Contribution {
-  id: string;
-  partner_id: string;
-  amount: number;
-  note: string | null;
-  contribution_date: string;
   created_at: string;
 }
 
@@ -71,12 +66,12 @@ export default function PartnersTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-1 overflow-x-auto pb-2">
+      <div className="flex flex-wrap gap-1">
         {subTabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setActiveSubTab(t.key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl text-xs md:text-sm font-medium transition whitespace-nowrap ${
               activeSubTab === t.key
                 ? "bg-white text-black"
                 : "text-zinc-400 hover:text-white hover:bg-zinc-900"
@@ -103,6 +98,16 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
   const [note, setNote] = useState("");
   const [contributionDate, setContributionDate] = useState(new Date().toISOString().slice(0, 10));
   const [submitting, setSubmitting] = useState(false);
+
+  const [showAddPartner, setShowAddPartner] = useState(false);
+  const [newPartnerName, setNewPartnerName] = useState("");
+  const [initialCapital, setInitialCapital] = useState("");
+  const [initialCapitalDate, setInitialCapitalDate] = useState(new Date().toISOString().slice(0, 10));
+  const [addingPartner, setAddingPartner] = useState(false);
+
+  const [editPartner, setEditPartner] = useState<{ id: string; name: string } | null>(null);
+  const [editName, setEditName] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const fetchPartners = useCallback(async () => {
     setLoading(true);
@@ -153,29 +158,121 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
     setSubmitting(false);
   };
 
+  const handleAddPartner = async () => {
+    if (!newPartnerName.trim()) {
+      showToast("Partner name is required", "error");
+      return;
+    }
+    const cap = Number(initialCapital);
+    if (initialCapital && (cap < 0 || isNaN(cap))) {
+      showToast("Capital cannot be negative", "error");
+      return;
+    }
+    setAddingPartner(true);
+    try {
+      const res = await fetch("/api/partners", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newPartnerName.trim(),
+          initialCapital: cap > 0 ? cap : 0,
+          initialCapitalDate: cap > 0 ? initialCapitalDate : undefined,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to add partner");
+      }
+      showToast("Partner added successfully", "success");
+      setShowAddPartner(false);
+      setNewPartnerName("");
+      setInitialCapital("");
+      fetchPartners();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to add partner", "error");
+    }
+    setAddingPartner(false);
+  };
+
+  const handleEditPartner = async () => {
+    if (!editPartner || !editName.trim()) {
+      showToast("Partner name is required", "error");
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/partners/${editPartner.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editName.trim() }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to update partner");
+      }
+      showToast("Partner updated successfully", "success");
+      setEditPartner(null);
+      fetchPartners();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to update partner", "error");
+    }
+    setSavingEdit(false);
+  };
+
+  const handleDeletePartner = async (partner: Partner) => {
+    if (partner.hasTransactions) {
+      showToast("Cannot delete partner with transaction history", "error");
+      return;
+    }
+    if (!confirm(`Delete partner "${partner.name}"?`)) return;
+    try {
+      const res = await fetch(`/api/partners/${partner.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to delete partner");
+      }
+      showToast("Partner deleted", "success");
+      fetchPartners();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to delete partner", "error");
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center py-10"><Loader2 size={24} className="animate-spin text-zinc-500" /></div>;
   }
 
   return (
     <div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <StatCard icon={<Users size={24} />} label="Total Partners" value={partners.length} />
-        <StatCard
-          icon={<Wallet size={24} />}
-          label="Total Capital"
-          value={`${partners.reduce((s, p) => s + p.currentCapital, 0).toLocaleString()} EGP`}
-        />
-        <StatCard
-          icon={<TrendingUp size={24} />}
-          label="Total Profit Distributed"
-          value={`${partners.reduce((s, p) => s + p.totalProfitEarned, 0).toLocaleString()} EGP`}
-        />
-        <StatCard
-          icon={<BarChart3 size={24} />}
-          label="Avg Ownership"
-          value={partners.length ? `${(100 / partners.length).toFixed(1)}%` : "0%"}
-        />
+      <div className="flex items-center justify-between mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
+          <StatCard icon={<Users size={24} />} label="Total Partners" value={partners.length} />
+          <StatCard
+            icon={<Wallet size={24} />}
+            label="Total Capital"
+            value={`${partners.reduce((s, p) => s + p.currentCapital, 0).toLocaleString()} EGP`}
+          />
+          <StatCard
+            icon={<TrendingUp size={24} />}
+            label="Total Profit Distributed"
+            value={`${partners.reduce((s, p) => s + p.totalProfitEarned, 0).toLocaleString()} EGP`}
+          />
+          <StatCard
+            icon={<BarChart3 size={24} />}
+            label="Avg Ownership"
+            value={partners.length ? `${(100 / partners.length).toFixed(1)}%` : "0%"}
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-bold text-lg">Partners</h3>
+        <button
+          onClick={() => setShowAddPartner(true)}
+          className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition"
+        >
+          <Plus size={16} /> Add Partner
+        </button>
       </div>
 
       <div className="overflow-x-auto">
@@ -193,7 +290,7 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
           <tbody>
             {partners.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-10 text-zinc-500">No partners yet</td>
+                <td colSpan={6} className="text-center py-10 text-zinc-500">No partners yet. Click "Add Partner" to create one.</td>
               </tr>
             ) : (
               partners.map((p) => (
@@ -206,12 +303,29 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
                     {p.lastUpdated ? new Date(p.lastUpdated).toLocaleDateString("en-GB") : "-"}
                   </td>
                   <td className="py-3 text-right">
-                    <button
-                      onClick={() => setAddCapitalModal({ partnerId: p.id, partnerName: p.name })}
-                      className="flex items-center gap-1.5 ml-auto text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg transition"
-                    >
-                      <Plus size={14} /> Add Capital
-                    </button>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => setAddCapitalModal({ partnerId: p.id, partnerName: p.name })}
+                        className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg transition"
+                        title="Add Capital"
+                      >
+                        <Plus size={14} />
+                      </button>
+                      <button
+                        onClick={() => { setEditPartner({ id: p.id, name: p.name }); setEditName(p.name); }}
+                        className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 p-1.5 rounded-lg transition"
+                        title="Edit"
+                      >
+                        <Edit3 size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDeletePartner(p)}
+                        className="text-xs bg-zinc-800 hover:bg-red-900/50 text-zinc-300 hover:text-red-400 p-1.5 rounded-lg transition"
+                        title={p.hasTransactions ? "Cannot delete partner with transaction history" : "Delete"}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -253,7 +367,7 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
                 />
               </div>
               <div>
-                <label className="block text-xs text-zinc-400 mb-1.5">Note (optional)</label>
+                <label className="block text-xs text-zinc-400 mb-1.5">Notes</label>
                 <input
                   type="text"
                   value={note}
@@ -282,6 +396,111 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
           </div>
         </div>
       )}
+
+      {showAddPartner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-bold">Add Partner</h3>
+              <button onClick={() => { setShowAddPartner(false); setNewPartnerName(""); setInitialCapital(""); }} className="text-zinc-400 hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Partner Name *</label>
+                <input
+                  type="text"
+                  value={newPartnerName}
+                  onChange={(e) => setNewPartnerName(e.target.value)}
+                  className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30 transition"
+                  placeholder="e.g. John Doe"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Initial Capital (optional)</label>
+                <input
+                  type="number"
+                  value={initialCapital}
+                  onChange={(e) => setInitialCapital(e.target.value)}
+                  min="0"
+                  step="0.01"
+                  className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30 transition"
+                  placeholder="e.g. 50000"
+                />
+              </div>
+              {initialCapital && Number(initialCapital) > 0 && (
+                <div>
+                  <label className="block text-xs text-zinc-400 mb-1.5">Date</label>
+                  <input
+                    type="date"
+                    value={initialCapitalDate}
+                    onChange={(e) => setInitialCapitalDate(e.target.value)}
+                    max={new Date().toISOString().slice(0, 10)}
+                    className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30 transition"
+                  />
+                </div>
+              )}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={handleAddPartner}
+                  disabled={addingPartner}
+                  className="flex-1 bg-white text-black py-3 rounded-xl font-bold text-sm hover:scale-[1.02] transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {addingPartner ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  Save
+                </button>
+                <button
+                  onClick={() => { setShowAddPartner(false); setNewPartnerName(""); setInitialCapital(""); }}
+                  className="flex-1 border border-white/10 py-3 rounded-xl text-sm hover:bg-zinc-800 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editPartner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-bold">Edit Partner</h3>
+              <button onClick={() => setEditPartner(null)} className="text-zinc-400 hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Partner Name *</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30 transition"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={handleEditPartner}
+                  disabled={savingEdit}
+                  className="flex-1 bg-white text-black py-3 rounded-xl font-bold text-sm hover:scale-[1.02] transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {savingEdit ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  Save
+                </button>
+                <button
+                  onClick={() => setEditPartner(null)}
+                  className="flex-1 border border-white/10 py-3 rounded-xl text-sm hover:bg-zinc-800 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -301,7 +520,6 @@ function CapitalHistoryView({ showToast }: { showToast: (msg: string, type: "suc
         const partnersList = Array.isArray(pData) ? pData : (pData.data || []);
         setPartners(partnersList);
 
-        // Fetch snapshots for all partners
         const allSnapshots: CapitalSnapshot[] = [];
         for (const p of partnersList) {
           const res = await fetch(`/api/partners/${p.id}/capital-snapshots`);
@@ -464,7 +682,6 @@ function ProfitDistributionView({ showToast }: { showToast: (msg: string, type: 
       return;
     }
 
-    // Fetch net profit from reports API
     setDistributing(true);
     try {
       const reportRes = await fetch(`/api/reports?periodStart=${start}&periodEnd=${end}`);
@@ -506,7 +723,6 @@ function ProfitDistributionView({ showToast }: { showToast: (msg: string, type: 
     { key: "custom", label: "Custom" },
   ];
 
-  // Group distributions by period
   const grouped = distributions.reduce<Record<string, { period: string; items: ProfitDistribution[] }>>((acc, d) => {
     const key = `${d.period_start}_${d.period_end}`;
     if (!acc[key]) {

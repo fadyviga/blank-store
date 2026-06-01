@@ -48,6 +48,51 @@ export async function GET(
   }
 }
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    const { name } = body;
+
+    if (!name || !name.trim()) {
+      return NextResponse.json({ error: "Partner name is required" }, { status: 400 });
+    }
+
+    const admin = getAdminClient();
+
+    // Check for duplicate name
+    const { data: existing } = await admin
+      .from("partners")
+      .select("id")
+      .neq("id", id)
+      .eq("name", name.trim())
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json({ error: "A partner with this name already exists" }, { status: 409 });
+    }
+
+    const { data, error } = await admin
+      .from("partners")
+      .update({ name: name.trim(), updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      const parsed = getResponseError(error);
+      return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });
+    }
+
+    return NextResponse.json(data);
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Invalid JSON" }, { status: 400 });
+  }
+}
+
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -55,6 +100,24 @@ export async function DELETE(
   try {
     const { id } = await params;
     const admin = getAdminClient();
+
+    // Check for existing capital transactions
+    const { data: contributions, error: countErr } = await admin
+      .from("partner_contributions")
+      .select("id", { count: "exact", head: true })
+      .eq("partner_id", id);
+
+    if (countErr) {
+      const parsed = getResponseError(countErr);
+      return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });
+    }
+
+    if (contributions && contributions.length > 0) {
+      return NextResponse.json(
+        { error: "Cannot delete partner with transaction history" },
+        { status: 400 }
+      );
+    }
 
     const { error } = await admin.from("partners").delete().eq("id", id);
     if (error) {
