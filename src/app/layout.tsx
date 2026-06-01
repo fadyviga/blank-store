@@ -69,7 +69,7 @@ export default function RootLayout({
           <CartProvider>
             <ToastProvider>
               <Header />
-              <div className="flex-1">{children}</div>
+              <div className="flex-1 pt-10">{children}</div>
             </ToastProvider>
           </CartProvider>
         </AuthProvider>
