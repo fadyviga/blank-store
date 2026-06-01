@@ -489,12 +489,13 @@ export async function PATCH(request: NextRequest) {
     const statusChanged = status && currentStatus !== null && status !== currentStatus;
     console.log(`[api/orders:${logId}] PATCH order ${id}: newStatus=${status}, oldStatus=${currentStatus}, stockProcessed=${stockProcessed}, statusChanged=${statusChanged}`);
 
-    // Compute lifecycle action based on OLD state
-    let needsDeduct = status === "processing" && !stockProcessed && statusChanged;
+    // Compute lifecycle action based on state transition
+    // Deduct stock when entering Processing or Completed (only if not already deducted)
+    let needsDeduct = (status === "processing" || status === "completed") && !stockProcessed && statusChanged;
+    // Restore stock when Cancelled (only if previously deducted)
     let needsRestore = status === "cancelled" && stockProcessed && statusChanged;
-    let isCompleted = status === "completed";
 
-    console.log(`[api/orders:${logId}] needsDeduct=${needsDeduct}, needsRestore=${needsRestore}, isCompleted=${isCompleted}`);
+    console.log(`[api/orders:${logId}] needsDeduct=${needsDeduct}, needsRestore=${needsRestore} (currentStatus=${currentStatus}, newStatus=${status}, stockProcessed=${stockProcessed})`);
 
     // Update order status + non-inventory fields first
     const updates: Record<string, unknown> = {};
@@ -525,7 +526,7 @@ export async function PATCH(request: NextRequest) {
     let stockFlagUpdate: boolean | null = null;
 
     if (needsDeduct) {
-      console.log(`[api/orders:${logId}] Transition "${currentStatus}" → "processing" — deducting stock`);
+      console.log(`[api/orders:${logId}] [inventory] Stock deduct triggered — "${currentStatus}" → "${status}"`);
       inventoryResult = await updateStockForOrder(admin, id as string, logId, "deduct");
       if (inventoryResult.processed > 0) {
         const { error: spErr } = await admin.from("orders").update({ stock_processed: true }).eq("id", id);
@@ -533,13 +534,13 @@ export async function PATCH(request: NextRequest) {
           console.error(`[api/orders:${logId}] Failed to set stock_processed=true:`, spErr.message);
         } else {
           stockFlagUpdate = true;
-          console.log(`[api/orders:${logId}] stock_processed=true set (${inventoryResult.processed}/${inventoryResult.total} items)`);
+          console.log(`[api/orders:${logId}] [inventory] Stock deducted (${inventoryResult.processed}/${inventoryResult.total} items), stock_processed=true`);
         }
       } else {
         console.warn(`[api/orders:${logId}] Deduct processed 0/${inventoryResult.total} items — stock_processed NOT set, retries will re-attempt`);
       }
     } else if (needsRestore) {
-      console.log(`[api/orders:${logId}] Transition "processing" → "cancelled" — restoring stock`);
+      console.log(`[api/orders:${logId}] [inventory] Stock restore triggered — "${currentStatus}" → "${status}"`);
       inventoryResult = await updateStockForOrder(admin, id as string, logId, "restore");
       if (inventoryResult.processed > 0) {
         const { error: spErr } = await admin.from("orders").update({ stock_processed: false }).eq("id", id);
@@ -547,10 +548,17 @@ export async function PATCH(request: NextRequest) {
           console.error(`[api/orders:${logId}] Failed to set stock_processed=false:`, spErr.message);
         } else {
           stockFlagUpdate = false;
+          console.log(`[api/orders:${logId}] [inventory] Stock restored (${inventoryResult.processed}/${inventoryResult.total} items), stock_processed=false`);
         }
       }
-    } else if (isCompleted) {
-      console.log(`[api/orders:${logId}] Completed — no stock changes`);
+    } else if (statusChanged) {
+      console.log(`[api/orders:${logId}] [inventory] No inventory action — "${currentStatus}" → "${status}" (stockProcessed=${stockProcessed})`);
+      if (status === "completed" && stockProcessed) {
+        console.log(`[api/orders:${logId}] [inventory] Duplicate deduction prevented — stock already deducted for this order`);
+      }
+      if (status === "cancelled" && !stockProcessed) {
+        console.log(`[api/orders:${logId}] [inventory] Restore skipped — stock was never deducted for this order`);
+      }
     }
 
     const responseBody: Record<string, any> = { success: true };
