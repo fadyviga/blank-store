@@ -24,7 +24,7 @@ export default function Home() {
     <main className="min-h-screen text-white">
       <HeroSection />
 
-      <section id="products" className="pt-10 pb-24 px-6 border-t border-white/10 bg-black">
+      <section id="products" className="pb-24 px-6 border-t border-white/10 bg-black">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-center gap-4 mb-12">
             <h2 className="text-4xl font-bold text-center">

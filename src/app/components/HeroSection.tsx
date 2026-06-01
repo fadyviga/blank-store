@@ -15,12 +15,12 @@ export default function HeroSection() {
   }, []);
 
   return (
-    <section className="relative h-screen w-full overflow-hidden bg-[#000]">
+    <section className="relative min-h-screen w-full overflow-hidden bg-[#000]">
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="w-[500px] h-[500px] sm:w-[700px] sm:h-[700px] rounded-full bg-white/[0.015] blur-[150px] animate-spotlight" />
       </div>
 
-      <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-6 -mt-16">
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-center px-6 pt-24">
         <div
           className={`mb-10 transition-all duration-1200 ease-out delay-200 ${
             mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
