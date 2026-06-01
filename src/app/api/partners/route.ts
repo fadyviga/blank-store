@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
     }
 
-    const { name, initialCapital } = body;
+    const { name, initialCapital, date } = body;
 
     if (!name || !(name as string).trim()) {
       return NextResponse.json({ error: "Partner name is required" }, { status: 400 });
@@ -91,21 +91,26 @@ export async function POST(request: NextRequest) {
     }
 
     if (initialCapital && Number(initialCapital) > 0) {
+      const txDate = typeof date === "string" && date.trim()
+        ? new Date(date).toISOString()
+        : new Date().toISOString();
+
       const { error: txErr } = await admin
         .from("partner_transactions")
         .insert({
           partner_id: partner.id,
           type: "deposit",
           amount: Number(initialCapital),
+          date: txDate,
         });
 
       if (txErr) {
         const parsed = getResponseError(txErr);
         return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });
       }
-    }
 
-    await generateSnapshot(admin);
+      await generateSnapshot(admin, txDate);
+    }
 
     return NextResponse.json(partner, { status: 201 });
   } catch (err) {

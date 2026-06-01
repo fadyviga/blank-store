@@ -44,7 +44,7 @@ export async function POST(
       return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
     }
 
-    const { amount, type } = body;
+    const { amount, type, date, notes } = body;
 
     if (!amount || Number(amount) <= 0) {
       return NextResponse.json({ error: "Amount must be greater than 0" }, { status: 400 });
@@ -66,8 +66,12 @@ export async function POST(
       return NextResponse.json({ error: "Partner not found" }, { status: 404 });
     }
 
+    const txDate = typeof date === "string" && date.trim()
+      ? new Date(date).toISOString()
+      : new Date().toISOString();
+
     if (type === "withdraw") {
-      const { capitalByPartner } = await computeCapital(admin);
+      const { capitalByPartner } = await computeCapital(admin, txDate);
       const currentCapital = capitalByPartner[id] || 0;
       if (Number(amount) > currentCapital) {
         return NextResponse.json(
@@ -77,13 +81,19 @@ export async function POST(
       }
     }
 
+    const insertBody: Record<string, unknown> = {
+      partner_id: id,
+      type,
+      amount: Number(amount),
+      date: txDate,
+    };
+    if (typeof notes === "string" && notes.trim()) {
+      insertBody.notes = notes.trim();
+    }
+
     const { data: tx, error: txErr } = await admin
       .from("partner_transactions")
-      .insert({
-        partner_id: id,
-        type,
-        amount: Number(amount),
-      })
+      .insert(insertBody)
       .select()
       .single();
 
@@ -92,7 +102,7 @@ export async function POST(
       return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });
     }
 
-    await generateSnapshot(admin);
+    await generateSnapshot(admin, txDate);
 
     return NextResponse.json(tx, { status: 201 });
   } catch (err) {

@@ -40,6 +40,7 @@ import PurchasesTab from "./PurchasesTab";
 import ExpensesTab from "./ExpensesTab";
 import ReportsTab from "./ReportsTab";
 import PartnersTab from "./PartnersTab";
+import TreasuryTab from "./TreasuryTab";
 
 type Tab =
   | "overview"
@@ -52,7 +53,8 @@ type Tab =
   | "purchases"
   | "expenses"
   | "reports"
-  | "partners";
+  | "partners"
+  | "treasury";
 
 export default function DashboardPage() {
   const handleLogout = () => {
@@ -110,6 +112,7 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
     { key: "expenses", label: "Expenses", icon: <Receipt size={16} /> },
     { key: "reports", label: "Reports", icon: <BarChart3 size={16} /> },
     { key: "partners", label: "Partners", icon: <HandCoins size={16} /> },
+    { key: "treasury", label: "Treasury", icon: <Wallet size={16} /> },
   ];
 
   const tabContent = (() => {
@@ -136,6 +139,8 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
         return <ReportsTab />;
       case "partners":
         return <PartnersTab />;
+      case "treasury":
+        return <TreasuryTab />;
     }
   })();
 
@@ -200,9 +205,28 @@ function OverviewTab({
   onViewOrders: () => void;
 }) {
   const recentOrders = useMemo(() => orders.slice(0, 5), [orders]);
+  const [treasuryBalance, setTreasuryBalance] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("/api/treasury")
+      .then((r) => r.json())
+      .then((d) => { if (d.cashBalance !== undefined) setTreasuryBalance(d.cashBalance); })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="space-y-8">
+      {treasuryBalance !== null && (
+        <div className="bg-zinc-950 border border-green-500/30 rounded-3xl p-5 md:p-6">
+          <div className="flex items-center gap-3 mb-1">
+            <Wallet size={20} className="text-green-400" />
+            <p className="text-zinc-400 text-xs uppercase tracking-widest">Current Treasury Balance</p>
+          </div>
+          <p className="text-3xl md:text-4xl font-black text-green-400">
+            {treasuryBalance.toLocaleString("en-EG", { minimumFractionDigits: 2 })} EGP
+          </p>
+        </div>
+      )}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard icon={<ShoppingBag size={24} />} label="Total Orders" value={stats.totalOrders} />
         <StatCard icon={<Wallet size={24} />} label="Revenue" value={`${stats.totalRevenue.toLocaleString()} EGP`} />

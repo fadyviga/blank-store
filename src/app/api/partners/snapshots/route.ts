@@ -9,7 +9,7 @@ export async function GET() {
     const { data: snapshots, error } = await admin
       .from("partner_snapshots")
       .select("*, partner_snapshot_items(*, partners(name))")
-      .order("created_at", { ascending: false });
+      .order("snapshot_date", { ascending: false });
 
     if (error) {
       const parsed = getResponseError(error);
