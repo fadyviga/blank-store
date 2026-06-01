@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient, getResponseError, isHtmlResponse } from "@/lib/supabase-admin";
+import { sendOrderConfirmationEmail } from "@/lib/email";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const WHATSAPP_NUMBER = "201287659463";
@@ -422,6 +423,25 @@ export async function POST(request: NextRequest) {
     const displayId = `BLK-${String(orderId).padStart(6, "0")}`;
 
     console.log(`[api/orders:${logId}] Order created: ${displayId} (id=${orderId})`);
+
+    // Fire-and-forget email notification (must not block or fail checkout)
+    void sendOrderConfirmationEmail({
+      id: String(orderId),
+      displayId,
+      customerName: customer.name.trim(),
+      customerPhone: customer.phone?.trim(),
+      items: items.map((i: any) => ({
+        name: i.name || "Unknown Item",
+        quantity: i.quantity || 1,
+        price: Number(i.price) || 0,
+      })),
+      subtotal: orderSubtotal,
+      deliveryFee: orderDelivery,
+      discountAmount: orderDiscount,
+      total: orderTotal,
+      couponCode: couponCode || undefined,
+      createdAt: new Date().toISOString(),
+    });
 
     return NextResponse.json({
       success: true,
