@@ -25,6 +25,7 @@ import {
   FileText,
   DollarSign,
   Receipt,
+  HandCoins,
 } from "lucide-react";
 import {
   loadOrders,
@@ -38,6 +39,7 @@ import { useToast } from "../components/Toast";
 import PurchasesTab from "./PurchasesTab";
 import ExpensesTab from "./ExpensesTab";
 import ReportsTab from "./ReportsTab";
+import PartnersTab from "./PartnersTab";
 
 type Tab =
   | "overview"
@@ -49,7 +51,8 @@ type Tab =
   | "restock"
   | "purchases"
   | "expenses"
-  | "reports";
+  | "reports"
+  | "partners";
 
 export default function DashboardPage() {
   const handleLogout = () => {
@@ -103,6 +106,7 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
     { key: "purchases", label: "Purchases", icon: <DollarSign size={16} /> },
     { key: "expenses", label: "Expenses", icon: <Receipt size={16} /> },
     { key: "reports", label: "Reports", icon: <BarChart3 size={16} /> },
+    { key: "partners", label: "Partners", icon: <HandCoins size={16} /> },
   ];
 
   const tabContent = (() => {
@@ -127,6 +131,8 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
         return <ExpensesTab />;
       case "reports":
         return <ReportsTab />;
+      case "partners":
+        return <PartnersTab />;
     }
   })();
 
