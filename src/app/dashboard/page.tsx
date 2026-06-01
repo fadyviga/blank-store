@@ -206,7 +206,7 @@ function OverviewTab({
 }) {
   const recentOrders = useMemo(() => orders.slice(0, 5), [orders]);
   const [treasuryBalance, setTreasuryBalance] = useState<number | null>(null);
-  const [salesData, setSalesData] = useState<{ totalSold: number; perProduct: { productName: string; quantitySold: number }[] } | null>(null);
+  const [salesData, setSalesData] = useState<{ totalUnitsSold: number; totalSalesValue: number; topSellingProducts: { productName: string; unitsSold: number; salesValue: number }[] } | null>(null);
   const [inventoryData, setInventoryData] = useState<{ totalStock: number; lowStockVariants: { productName: string; stock: number }[] } | null>(null);
 
   useEffect(() => {
@@ -225,7 +225,8 @@ function OverviewTab({
       .catch(() => {});
   }, []);
 
-  const topSelling = useMemo(() => (salesData?.perProduct || []).slice(0, 5), [salesData]);
+  const topSelling = useMemo(() => (salesData?.topSellingProducts || []).slice(0, 5), [salesData]);
+  const bestSelling = useMemo(() => salesData?.topSellingProducts?.[0] ?? null, [salesData]);
   const lowStockItems = useMemo(() => (inventoryData?.lowStockVariants || []).slice(0, 5), [inventoryData]);
 
   return (
@@ -253,13 +254,50 @@ function OverviewTab({
         />
       </div>
 
+      {/* Sales Overview */}
+      <div>
+        <h2 className="text-xl font-bold mb-4">Sales Overview</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <StatCard icon={<Wallet size={24} />} label="Total Sales (EGP)" value={salesData ? `${salesData.totalSalesValue.toLocaleString()} EGP` : "—"} />
+          <StatCard icon={<ShoppingBag size={24} />} label="Total Units Sold" value={salesData?.totalUnitsSold ?? "—"} />
+          <StatCard icon={<TrendingUp size={24} />} label="Best Selling Product" value={bestSelling ? bestSelling.productName : "—"} />
+          <StatCard icon={<Package size={24} />} label="Best Seller Units" value={bestSelling ? bestSelling.unitsSold : "—"} />
+        </div>
+
+        {/* Sales by Product Chart */}
+        <div className="bg-zinc-950 border border-white/10 rounded-2xl p-5">
+          <h3 className="font-bold text-sm mb-4">Sales by Product</h3>
+          {topSelling.length === 0 ? (
+            <p className="text-zinc-500 text-xs py-4 text-center">No sales data yet</p>
+          ) : (
+            <div className="space-y-3">
+              {topSelling.map((item, i) => {
+                const maxValue = Math.max(...topSelling.map((p) => p.salesValue));
+                const pct = maxValue > 0 ? (item.salesValue / maxValue) * 100 : 0;
+                return (
+                  <div key={i}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-zinc-300">{item.productName}</span>
+                      <span className="text-zinc-400">{item.unitsSold} units &middot; {item.salesValue.toLocaleString()} EGP</span>
+                    </div>
+                    <div className="h-2.5 bg-zinc-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-white rounded-full" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Inventory Overview */}
       <div>
         <h2 className="text-xl font-bold mb-4">Inventory Overview</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-          <StatCard icon={<Package size={24} />} label="Total Products Sold" value={salesData?.totalSold ?? "—"} />
+          <StatCard icon={<Package size={24} />} label="Total Products Sold" value={salesData?.totalUnitsSold ?? "—"} />
           <StatCard icon={<Package size={24} />} label="Total Stock Available" value={inventoryData?.totalStock ?? "—"} />
-          <StatCard icon={<TrendingUp size={24} />} label="Top Seller Qty" value={topSelling.length > 0 ? topSelling[0].quantitySold : "—"} />
+          <StatCard icon={<TrendingUp size={24} />} label="Top Seller Qty" value={topSelling.length > 0 ? topSelling[0].unitsSold : "—"} />
           <StatCard
             icon={<AlertTriangle size={24} />}
             label="Low Stock Items"
@@ -282,7 +320,7 @@ function OverviewTab({
                       <span className="text-zinc-500 text-xs w-4">{i + 1}.</span>
                       <span className="text-sm">{item.productName}</span>
                     </div>
-                    <span className="text-sm font-bold">{item.quantitySold}</span>
+                    <span className="text-sm font-bold">{item.unitsSold}</span>
                   </div>
                 ))}
               </div>

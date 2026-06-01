@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase-admin";
 
-interface ProductSale {
-  productId: string;
+interface TopSellingProduct {
   productName: string;
-  quantitySold: number;
+  unitsSold: number;
+  salesValue: number;
 }
 
 export async function GET() {
@@ -20,8 +20,12 @@ export async function GET() {
       return NextResponse.json({ error: oErr.message }, { status: 500 });
     }
 
-    const salesByProduct: Record<string, { name: string; qty: number }> = {};
-    let totalSold = 0;
+    const salesByProduct: Record<
+      string,
+      { name: string; units: number; value: number }
+    > = {};
+    let totalUnitsSold = 0;
+    let totalSalesValue = 0;
 
     for (const order of orders || []) {
       let items: any[] = [];
@@ -33,24 +37,35 @@ export async function GET() {
 
       for (const item of items) {
         const qty = Number(item.quantity) || 1;
-        totalSold += qty;
+        const price = Number(item.price) || 0;
+        const lineValue = qty * price;
+
+        totalUnitsSold += qty;
+        totalSalesValue += lineValue;
 
         const pid = item.product_id || item.id || "unknown";
         const name = item.name || "Unknown Item";
+
         if (!salesByProduct[pid]) {
-          salesByProduct[pid] = { name, qty: 0 };
+          salesByProduct[pid] = { name, units: 0, value: 0 };
         }
-        salesByProduct[pid].qty += qty;
+        salesByProduct[pid].units += qty;
+        salesByProduct[pid].value += lineValue;
       }
     }
 
-    const perProduct: ProductSale[] = Object.entries(salesByProduct)
-      .map(([productId, data]) => ({ productId, productName: data.name, quantitySold: data.qty }))
-      .sort((a, b) => b.quantitySold - a.quantitySold);
+    const topSellingProducts: TopSellingProduct[] = Object.values(salesByProduct)
+      .map(({ name, units, value }) => ({
+        productName: name,
+        unitsSold: units,
+        salesValue: value,
+      }))
+      .sort((a, b) => b.unitsSold - a.unitsSold);
 
     return NextResponse.json({
-      totalSold,
-      perProduct,
+      totalUnitsSold,
+      totalSalesValue,
+      topSellingProducts,
     });
   } catch (err) {
     return NextResponse.json(
