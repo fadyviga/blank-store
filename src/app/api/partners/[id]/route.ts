@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient, getResponseError } from "@/lib/supabase-admin";
+import { computeCapital, getLatestSnapshot } from "../_utils";
 
 export async function GET(
   _request: NextRequest,
@@ -23,22 +24,26 @@ export async function GET(
       return NextResponse.json({ error: parsed.cleanedMessage }, { status: 404 });
     }
 
-    const { data: allTx } = await admin
-      .from("partner_capital_transactions")
-      .select("partner_id, amount, type");
+    const snapshot = await getLatestSnapshot(admin);
 
-    let partnerCapital = 0;
-    let totalCapital = 0;
-    for (const tx of allTx || []) {
-      const delta = tx.type === "deposit" ? Number(tx.amount) : -Number(tx.amount);
-      if (tx.partner_id === id) partnerCapital += delta;
-      totalCapital += delta;
+    let currentCapital = 0;
+    let ownershipPercentage = 0;
+
+    if (snapshot) {
+      const item = snapshot.items.find((i: any) => i.partner_id === id);
+      currentCapital = item ? Number(item.capital) : 0;
+      const totalCapital = Number(snapshot.total_capital);
+      ownershipPercentage = totalCapital > 0 ? currentCapital / totalCapital : 0;
+    } else {
+      const { capitalByPartner, totalCapital } = await computeCapital(admin);
+      currentCapital = capitalByPartner[id] || 0;
+      ownershipPercentage = totalCapital > 0 ? currentCapital / totalCapital : 0;
     }
 
     return NextResponse.json({
       ...partner,
-      currentCapital: partnerCapital,
-      ownershipPercentage: totalCapital > 0 ? partnerCapital / totalCapital : 0,
+      currentCapital,
+      ownershipPercentage,
     });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
@@ -73,7 +78,7 @@ export async function PATCH(
 
     const { data, error } = await admin
       .from("partners")
-      .update({ name: name.trim(), updated_at: new Date().toISOString() })
+      .update({ name: name.trim() })
       .eq("id", id)
       .select()
       .single();
@@ -98,7 +103,7 @@ export async function DELETE(
     const admin = getAdminClient();
 
     const { data: tx, error: countErr } = await admin
-      .from("partner_capital_transactions")
+      .from("partner_transactions")
       .select("id", { count: "exact", head: true })
       .eq("partner_id", id);
 

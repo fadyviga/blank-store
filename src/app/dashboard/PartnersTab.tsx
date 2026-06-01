@@ -15,6 +15,9 @@ import {
   Edit3,
   Trash2,
   Save,
+  ChevronDown,
+  ChevronRight,
+  Camera,
 } from "lucide-react";
 import { useToast } from "../components/Toast";
 
@@ -27,13 +30,28 @@ interface Partner {
   created_at: string;
 }
 
-interface CapitalTransaction {
+interface Transaction {
   id: string;
   partner_id: string;
   type: "deposit" | "withdraw";
   amount: number;
-  notes: string | null;
   created_at: string;
+}
+
+interface SnapshotItem {
+  id: string;
+  snapshot_id: string;
+  partner_id: string;
+  capital: number;
+  percentage: number;
+  partners: { name: string } | null;
+}
+
+interface Snapshot {
+  id: string;
+  total_capital: number;
+  created_at: string;
+  partner_snapshot_items: SnapshotItem[];
 }
 
 type Period = "this_month" | "last_month" | "this_year" | "custom";
@@ -77,9 +95,10 @@ export default function PartnersTab() {
 function PartnersListView({ showToast }: { showToast: (msg: string, type: "success" | "error") => void }) {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
-  const [addCapitalModal, setAddCapitalModal] = useState<{ partnerId: string; partnerName: string } | null>(null);
-  const [amount, setAmount] = useState("");
-  const [notes, setNotes] = useState("");
+
+  const [txModal, setTxModal] = useState<{ partnerId: string; partnerName: string } | null>(null);
+  const [txType, setTxType] = useState<"deposit" | "withdraw">("deposit");
+  const [txAmount, setTxAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const [showAddPartner, setShowAddPartner] = useState(false);
@@ -107,31 +126,31 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
     fetchPartners();
   }, [fetchPartners]);
 
-  const handleAddCapital = async () => {
-    if (!addCapitalModal) return;
-    const amt = Number(amount);
+  const handleTransaction = async () => {
+    if (!txModal) return;
+    const amt = Number(txAmount);
     if (!amt || amt <= 0) {
       showToast("Amount must be greater than 0", "error");
       return;
     }
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/partners/${addCapitalModal.partnerId}/contributions`, {
+      const res = await fetch(`/api/partners/${txModal.partnerId}/transactions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: amt, notes: notes || null }),
+        body: JSON.stringify({ amount: amt, type: txType }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to add capital");
+        throw new Error(err.error || "Failed to create transaction");
       }
-      showToast("Capital added successfully", "success");
-      setAddCapitalModal(null);
-      setAmount("");
-      setNotes("");
+      showToast(`${txType === "deposit" ? "Deposit" : "Withdraw"} successful`, "success");
+      setTxModal(null);
+      setTxAmount("");
+      setTxType("deposit");
       fetchPartners();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to add capital", "error");
+      showToast(err instanceof Error ? err.message : "Failed to create transaction", "error");
     }
     setSubmitting(false);
   };
@@ -271,11 +290,18 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
                   <td className="py-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
                       <button
-                        onClick={() => setAddCapitalModal({ partnerId: p.id, partnerName: p.name })}
+                        onClick={() => { setTxModal({ partnerId: p.id, partnerName: p.name }); setTxType("deposit"); setTxAmount(""); }}
                         className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg transition"
-                        title="Add Capital"
+                        title="Deposit"
                       >
                         <Plus size={14} />
+                      </button>
+                      <button
+                        onClick={() => { setTxModal({ partnerId: p.id, partnerName: p.name }); setTxType("withdraw"); setTxAmount(""); }}
+                        className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg transition"
+                        title="Withdraw"
+                      >
+                        <Wallet size={14} />
                       </button>
                       <button
                         onClick={() => { setEditPartner({ id: p.id, name: p.name }); setEditName(p.name); }}
@@ -300,49 +326,64 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
         </table>
       </div>
 
-      {addCapitalModal && (
+      {txModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 w-full max-w-md">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold">Add Capital — {addCapitalModal.partnerName}</h3>
-              <button onClick={() => setAddCapitalModal(null)} className="text-zinc-400 hover:text-white">
+              <h3 className="font-bold">{txType === "deposit" ? "Deposit" : "Withdraw"} — {txModal.partnerName}</h3>
+              <button onClick={() => setTxModal(null)} className="text-zinc-400 hover:text-white">
                 <X size={18} />
               </button>
             </div>
             <div className="space-y-4">
               <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Type</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setTxType("deposit")}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition ${
+                      txType === "deposit"
+                        ? "bg-green-600 text-white"
+                        : "bg-zinc-800 text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    Deposit
+                  </button>
+                  <button
+                    onClick={() => setTxType("withdraw")}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition ${
+                      txType === "withdraw"
+                        ? "bg-red-600 text-white"
+                        : "bg-zinc-800 text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    Withdraw
+                  </button>
+                </div>
+              </div>
+              <div>
                 <label className="block text-xs text-zinc-400 mb-1.5">Amount (EGP)</label>
                 <input
                   type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  value={txAmount}
+                  onChange={(e) => setTxAmount(e.target.value)}
                   min="1"
                   step="0.01"
                   className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30 transition"
                   placeholder="e.g. 10000"
                 />
               </div>
-              <div>
-                <label className="block text-xs text-zinc-400 mb-1.5">Notes</label>
-                <input
-                  type="text"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30 transition"
-                  placeholder="e.g. Additional investment"
-                />
-              </div>
               <div className="flex gap-3 pt-2">
                 <button
-                  onClick={handleAddCapital}
+                  onClick={handleTransaction}
                   disabled={submitting}
                   className="flex-1 bg-white text-black py-3 rounded-xl font-bold text-sm hover:scale-[1.02] transition flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {submitting ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                  Add Capital
+                  {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  {txType === "deposit" ? "Deposit" : "Withdraw"}
                 </button>
                 <button
-                  onClick={() => setAddCapitalModal(null)}
+                  onClick={() => setTxModal(null)}
                   className="flex-1 border border-white/10 py-3 rounded-xl text-sm hover:bg-zinc-800 transition"
                 >
                   Cancel
@@ -450,101 +491,124 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
 }
 
 function CapitalHistoryView({ showToast }: { showToast: (msg: string, type: "success" | "error") => void }) {
-  const [transactions, setTransactions] = useState<CapitalTransaction[]>([]);
-  const [partners, setPartners] = useState<Partner[]>([]);
+  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPartner, setSelectedPartner] = useState<string>("all");
+  const [generating, setGenerating] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [pRes] = await Promise.all([fetch("/api/partners")]);
-        const pData = await pRes.json();
-        const partnersList = Array.isArray(pData) ? pData : (pData.data || []);
-        setPartners(partnersList);
-
-        const allTx: CapitalTransaction[] = [];
-        for (const p of partnersList) {
-          const res = await fetch(`/api/partners/${p.id}/capital-snapshots`);
-          const data = await res.json();
-          if (Array.isArray(data)) {
-            allTx.push(...data);
-          }
-        }
-        setTransactions(allTx.sort((a, b) => b.created_at.localeCompare(a.created_at)));
-      } catch {
-        showToast("Failed to load capital history", "error");
-      }
-      setLoading(false);
-    };
-    fetchData();
+  const fetchSnapshots = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/partners/snapshots");
+      const data = await res.json();
+      setSnapshots(Array.isArray(data) ? data : (data.data || []));
+    } catch {
+      showToast("Failed to load snapshots", "error");
+    }
+    setLoading(false);
   }, [showToast]);
 
-  const filtered = selectedPartner === "all"
-    ? transactions
-    : transactions.filter((t) => t.partner_id === selectedPartner);
+  useEffect(() => {
+    fetchSnapshots();
+  }, [fetchSnapshots]);
+
+  const handleGenerateSnapshot = async () => {
+    setGenerating(true);
+    try {
+      const res = await fetch("/api/partners/snapshots", { method: "POST" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to generate snapshot");
+      }
+      showToast("Snapshot generated successfully", "success");
+      fetchSnapshots();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to generate snapshot", "error");
+    }
+    setGenerating(false);
+  };
+
+  const toggleExpand = (id: string) => {
+    const next = new Set(expanded);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setExpanded(next);
+  };
 
   if (loading) {
     return <div className="flex justify-center py-10"><Loader2 size={24} className="animate-spin text-zinc-500" /></div>;
   }
 
-  const typeLabel = (t: CapitalTransaction) => {
-    switch (t.type) {
-      case "deposit": return <span className="text-green-400">Deposit</span>;
-      case "withdraw": return <span className="text-red-400">Withdraw</span>;
-    }
-  };
-
   return (
     <div>
-      <div className="flex items-center gap-4 mb-6">
-        <label className="text-xs text-zinc-400">Filter by partner:</label>
-        <select
-          value={selectedPartner}
-          onChange={(e) => setSelectedPartner(e.target.value)}
-          className="bg-zinc-900 border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-white/30"
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="font-bold text-lg">Capital Snapshots</h3>
+        <button
+          onClick={handleGenerateSnapshot}
+          disabled={generating}
+          className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition disabled:opacity-50"
         >
-          <option value="all">All Partners</option>
-          {partners.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+          {generating ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
+          Generate Snapshot
+        </button>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-white/10">
-              <th className="text-left py-3 text-zinc-500 font-medium">Partner</th>
-              <th className="text-left py-3 text-zinc-500 font-medium">Type</th>
-              <th className="text-right py-3 text-zinc-500 font-medium">Amount</th>
-              <th className="text-left py-3 text-zinc-500 font-medium">Date</th>
-              <th className="text-left py-3 text-zinc-500 font-medium">Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="text-center py-10 text-zinc-500">No capital transactions yet</td>
-              </tr>
-            ) : (
-              filtered.map((t) => {
-                const partner = partners.find((p) => p.id === t.partner_id);
-                return (
-                  <tr key={t.id} className="border-b border-white/5">
-                    <td className="py-3 font-medium">{partner?.name || "Unknown"}</td>
-                    <td className="py-3">{typeLabel(t)}</td>
-                    <td className="py-3 text-right">{t.amount.toLocaleString()} EGP</td>
-                    <td className="py-3 text-zinc-300">{new Date(t.created_at).toLocaleDateString("en-GB")}</td>
-                    <td className="py-3 text-zinc-400 text-xs max-w-[200px] truncate">{t.notes || "-"}</td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      {snapshots.length === 0 ? (
+        <div className="text-center py-16">
+          <BarChart3 size={48} className="mx-auto text-zinc-700 mb-4" />
+          <p className="text-zinc-500">No snapshots yet</p>
+          <p className="text-zinc-600 text-sm mt-2">
+            Snapshots are created automatically when transactions occur
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {snapshots.map((s) => {
+            const isExpanded = expanded.has(s.id);
+            const items = s.partner_snapshot_items || [];
+            return (
+              <div key={s.id} className="bg-zinc-950 border border-white/10 rounded-2xl overflow-hidden">
+                <button
+                  onClick={() => toggleExpand(s.id)}
+                  className="w-full flex items-center justify-between p-4 hover:bg-zinc-900/50 transition text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    {isExpanded ? <ChevronDown size={16} className="text-zinc-400" /> : <ChevronRight size={16} className="text-zinc-400" />}
+                    <div>
+                      <span className="text-sm font-medium">{new Date(s.created_at).toLocaleString("en-GB")}</span>
+                      <span className="text-xs text-zinc-500 ml-3">
+                        {items.length} partner{items.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold">{Number(s.total_capital).toLocaleString()} EGP</span>
+                </button>
+                {isExpanded && (
+                  <div className="border-t border-white/5 px-4 pb-4">
+                    <table className="w-full text-sm mt-3">
+                      <thead>
+                        <tr className="border-b border-white/5">
+                          <th className="text-left py-2 text-zinc-500 font-medium text-xs">Partner</th>
+                          <th className="text-right py-2 text-zinc-500 font-medium text-xs">Capital</th>
+                          <th className="text-right py-2 text-zinc-500 font-medium text-xs">%</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {items.map((item) => (
+                          <tr key={item.id} className="border-b border-white/5">
+                            <td className="py-2 text-sm font-medium">{item.partners?.name || "Unknown"}</td>
+                            <td className="py-2 text-right">{Number(item.capital).toLocaleString()} EGP</td>
+                            <td className="py-2 text-right">{(Number(item.percentage) * 100).toFixed(2)}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

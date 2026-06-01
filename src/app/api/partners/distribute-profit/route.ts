@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient, getResponseError } from "@/lib/supabase-admin";
+import { computeCapital, getLatestSnapshot } from "../_utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,17 +29,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No partners found" }, { status: 400 });
     }
 
-    const { data: allTx } = await admin
-      .from("partner_capital_transactions")
-      .select("partner_id, amount, type")
-      .lte("created_at", periodEnd);
+    const snapshot = await getLatestSnapshot(admin);
 
-    const capitalByPartner: Record<string, number> = {};
+    let capitalByPartner: Record<string, number> = {};
     let totalCapital = 0;
-    for (const tx of allTx || []) {
-      const delta = tx.type === "deposit" ? Number(tx.amount) : -Number(tx.amount);
-      capitalByPartner[tx.partner_id] = (capitalByPartner[tx.partner_id] || 0) + delta;
-      totalCapital += delta;
+
+    if (snapshot) {
+      totalCapital = Number(snapshot.total_capital);
+      for (const item of snapshot.items) {
+        capitalByPartner[item.partner_id] = Number(item.capital);
+      }
+    } else {
+      const { data: allTx } = await admin
+        .from("partner_transactions")
+        .select("partner_id, amount, type")
+        .lte("created_at", periodEnd);
+
+      for (const tx of allTx || []) {
+        const delta = tx.type === "deposit" ? Number(tx.amount) : -Number(tx.amount);
+        capitalByPartner[tx.partner_id] = (capitalByPartner[tx.partner_id] || 0) + delta;
+        totalCapital += delta;
+      }
     }
 
     const result = partners.map((partner) => {

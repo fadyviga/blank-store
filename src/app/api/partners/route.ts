@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient, getResponseError } from "@/lib/supabase-admin";
+import { computeCapital, getLatestSnapshot, generateSnapshot, getTransactionsByPartner } from "./_utils";
 
 export async function GET() {
   try {
@@ -18,16 +19,21 @@ export async function GET() {
       return NextResponse.json({ error: parsed.cleanedMessage, data: [] }, { status: 200 });
     }
 
-    const { data: allTx } = await admin
-      .from("partner_capital_transactions")
-      .select("partner_id, amount, type");
+    const txPartnerIds = await getTransactionsByPartner(admin);
+    const snapshot = await getLatestSnapshot(admin);
 
-    const capitalByPartner: Record<string, number> = {};
+    let capitalByPartner: Record<string, number> = {};
     let totalCapital = 0;
-    for (const tx of allTx || []) {
-      const delta = tx.type === "deposit" ? Number(tx.amount) : -Number(tx.amount);
-      capitalByPartner[tx.partner_id] = (capitalByPartner[tx.partner_id] || 0) + delta;
-      totalCapital += delta;
+
+    if (snapshot) {
+      totalCapital = Number(snapshot.total_capital);
+      for (const item of snapshot.items) {
+        capitalByPartner[item.partner_id] = Number(item.capital);
+      }
+    } else {
+      const computed = await computeCapital(admin);
+      capitalByPartner = computed.capitalByPartner;
+      totalCapital = computed.totalCapital;
     }
 
     const enriched = (partners || []).map((partner) => {
@@ -36,7 +42,7 @@ export async function GET() {
         ...partner,
         currentCapital,
         ownershipPercentage: totalCapital > 0 ? currentCapital / totalCapital : 0,
-        hasTransactions: currentCapital !== 0,
+        hasTransactions: txPartnerIds.has(partner.id),
       };
     });
 
@@ -49,7 +55,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, initialCapital, initialCapitalDate, initialCapitalNote } = body;
+    const { name, initialCapital } = body;
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: "Partner name is required" }, { status: 400 });
@@ -79,15 +85,21 @@ export async function POST(request: NextRequest) {
     }
 
     if (initialCapital && Number(initialCapital) > 0) {
-      await admin
-        .from("partner_capital_transactions")
+      const { error: txErr } = await admin
+        .from("partner_transactions")
         .insert({
           partner_id: partner.id,
           type: "deposit",
           amount: Number(initialCapital),
-          notes: initialCapitalNote || "Initial capital",
         });
+
+      if (txErr) {
+        const parsed = getResponseError(txErr);
+        return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });
+      }
     }
+
+    await generateSnapshot(admin);
 
     return NextResponse.json(partner, { status: 201 });
   } catch (err) {
