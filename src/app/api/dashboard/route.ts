@@ -42,24 +42,25 @@ export async function GET() {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
+    const completedOrdersList = orders?.filter((o) => o.status === "completed") || [];
     const totalOrders = orders?.length || 0;
-    const totalRevenue = orders?.reduce((sum, o) => sum + computeProductTotal(o.items), 0) || 0;
-    const totalShipping = orders?.reduce((sum, o) => sum + (o.delivery_fee ?? o.delivery ?? 0), 0) || 0;
+    const totalRevenue = completedOrdersList.reduce((sum, o) => sum + computeProductTotal(o.items), 0) || 0;
+    const totalShipping = completedOrdersList.reduce((sum, o) => sum + (o.delivery_fee ?? o.delivery ?? 0), 0) || 0;
     const deliveryRevenue = totalShipping;
     const customers = new Set(
       orders?.map((o) => o.phone || o.name || o.user_id).filter(Boolean)
     );
     const totalCustomers = customers.size;
 
-    const todayRevenue = orders
-      ?.filter((o) => o.created_at >= todayStart && o.status !== "cancelled")
+    const todayRevenue = completedOrdersList
+      .filter((o) => o.created_at >= todayStart)
       .reduce((sum, o) => sum + computeProductTotal(o.items), 0) || 0;
 
-    const monthlyRevenue = orders
-      ?.filter((o) => o.created_at >= monthStart && o.status !== "cancelled")
+    const monthlyRevenue = completedOrdersList
+      .filter((o) => o.created_at >= monthStart)
       .reduce((sum, o) => sum + computeProductTotal(o.items), 0) || 0;
 
-    const completedOrders = orders?.filter((o) => o.status === "completed").length || 0;
+    const completedOrders = completedOrdersList.length;
     const pendingOrders = orders?.filter((o) => o.status === "pending").length || 0;
 
     let products: any[] = [];
@@ -124,12 +125,10 @@ export async function GET() {
     const avgOrderValue = completedOrders > 0 ? monthlyRevenue / completedOrders : 0;
 
     const monthlyRevMap: Record<string, number> = {};
-    orders?.forEach((o) => {
-      if (o.status !== "cancelled") {
-        const month = o.created_at?.slice(0, 7);
-        if (month) {
-          monthlyRevMap[month] = (monthlyRevMap[month] || 0) + computeProductTotal(o.items);
-        }
+    completedOrdersList.forEach((o) => {
+      const month = o.created_at?.slice(0, 7);
+      if (month) {
+        monthlyRevMap[month] = (monthlyRevMap[month] || 0) + computeProductTotal(o.items);
       }
     });
 
