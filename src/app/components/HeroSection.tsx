@@ -20,7 +20,7 @@ export default function HeroSection() {
         <div className="w-[500px] h-[500px] sm:w-[700px] sm:h-[700px] rounded-full bg-white/[0.015] blur-[150px] animate-spotlight" />
       </div>
 
-      <div className="relative z-10 flex flex-col items-center h-full text-center px-6 pt-28 pb-20">
+      <div className="relative z-10 flex flex-col items-center h-full text-center px-6 pt-8 pb-20">
         <div
           className={`mb-10 transition-all duration-1200 ease-out delay-200 ${
             mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
