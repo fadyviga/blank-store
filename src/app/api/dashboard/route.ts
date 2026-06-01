@@ -15,7 +15,7 @@ export async function GET() {
       if (parsed.htmlResponse || parsed.tableNotFound) {
         console.error("[api/dashboard] Supabase unreachable or orders table missing:", parsed.cleanedMessage);
         return NextResponse.json({
-          totalOrders: 0, totalRevenue: 0, totalShipping: 0, totalCustomers: 0,
+          totalOrders: 0, totalRevenue: 0, productRevenue: 0, deliveryRevenue: 0, totalShipping: 0, totalCustomers: 0,
           totalProducts: 0, totalVariants: 0,
           lowStockVariants: 0, outOfStockVariants: 0, pendingOrders: 0,
           lowStockItems: [], outOfStockItems: [], recentOrders: [], revenueByMonth: [],
@@ -39,6 +39,7 @@ export async function GET() {
       return sum + Math.max(0, total - delivery);
     }, 0) || 0;
     const totalShipping = orders?.reduce((sum, o) => sum + (o.delivery ?? 0), 0) || 0;
+    const deliveryRevenue = totalShipping;
     const customers = new Set(
       orders?.map((o) => o.phone || o.name || o.user_id).filter(Boolean)
     );
@@ -136,6 +137,8 @@ export async function GET() {
     return NextResponse.json({
       totalOrders,
       totalRevenue,
+      productRevenue: totalRevenue,
+      deliveryRevenue,
       totalShipping,
       totalCustomers,
       totalProducts,

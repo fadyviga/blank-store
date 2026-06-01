@@ -18,6 +18,8 @@ const PERIOD_ALIASES: Record<string, string> = {
 function emptySummary() {
   return {
     totalRevenue: 0,
+    productRevenue: 0,
+    deliveryRevenue: 0,
     inventoryCost: 0,
     operatingExpenses: 0,
     totalExpenses: 0,
@@ -101,9 +103,11 @@ export async function GET(request: NextRequest) {
     }
 
     // --- Orders (Revenue) ---
-    let revenue = 0;
+    let productRevenue = 0;
+    let deliveryRevenue = 0;
     let totalOrders = 0;
     let revenueOverTime: { date: string; value: number }[] = [];
+    let deliveryRevenueOverTime: { date: string; value: number }[] = [];
     let ordersOverTime: { date: string; value: number }[] = [];
 
     const { data: orderData, error: orderErr } = await admin
@@ -119,17 +123,23 @@ export async function GET(request: NextRequest) {
     } else if (orderData) {
       totalOrders = orderData.length;
       const revBuckets: Record<string, number> = {};
+      const delBuckets: Record<string, number> = {};
       const ordBuckets: Record<string, number> = {};
       for (const o of orderData) {
         const total = o.total ?? 0;
         const delivery = o.delivery ?? 0;
-        const productRevenue = Math.max(0, total - delivery);
-        revenue += productRevenue;
+        const rev = Math.max(0, total - delivery);
+        productRevenue += rev;
+        deliveryRevenue += delivery;
         const bucket = getBucket(o.created_at?.split("T")[0] || "", rangeDays);
-        revBuckets[bucket] = (revBuckets[bucket] || 0) + productRevenue;
+        revBuckets[bucket] = (revBuckets[bucket] || 0) + rev;
+        delBuckets[bucket] = (delBuckets[bucket] || 0) + delivery;
         ordBuckets[bucket] = (ordBuckets[bucket] || 0) + 1;
       }
       revenueOverTime = Object.entries(revBuckets)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, value]) => ({ date, value }));
+      deliveryRevenueOverTime = Object.entries(delBuckets)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([date, value]) => ({ date, value }));
       ordersOverTime = Object.entries(ordBuckets)
@@ -199,10 +209,11 @@ export async function GET(request: NextRequest) {
     }
 
     // --- Derived calculations ---
+    const totalRevenue = productRevenue;
     const totalExpenses = inventoryCost + operatingExpenses;
-    const grossProfit = revenue - inventoryCost;
-    const netProfit = revenue - inventoryCost - operatingExpenses;
-    const averageOrderValue = totalOrders > 0 ? revenue / totalOrders : 0;
+    const grossProfit = productRevenue - inventoryCost;
+    const netProfit = productRevenue - inventoryCost - operatingExpenses;
+    const averageOrderValue = totalOrders > 0 ? productRevenue / totalOrders : 0;
 
     // --- Profit Over Time ---
     const profitBuckets: Record<string, number> = {};
@@ -222,7 +233,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       summary: {
         ...emptySummary(),
-        totalRevenue: revenue,
+        totalRevenue,
+        productRevenue,
+        deliveryRevenue,
         inventoryCost,
         operatingExpenses,
         totalExpenses,
@@ -233,6 +246,7 @@ export async function GET(request: NextRequest) {
         avgOrderValue: averageOrderValue,
       },
       revenueOverTime,
+      deliveryRevenueOverTime,
       inventoryCostOverTime,
       expensesOverTime,
       ordersOverTime,

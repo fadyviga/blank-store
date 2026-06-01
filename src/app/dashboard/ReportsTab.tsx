@@ -24,6 +24,8 @@ interface DataPoint {
 
 interface ReportSummary {
   totalRevenue: number;
+  productRevenue: number;
+  deliveryRevenue: number;
   inventoryCost: number;
   operatingExpenses: number;
   totalExpenses: number;
@@ -37,6 +39,7 @@ interface ReportSummary {
 interface ReportData {
   summary: ReportSummary;
   revenueOverTime: DataPoint[];
+  deliveryRevenueOverTime: DataPoint[];
   inventoryCostOverTime: DataPoint[];
   expensesOverTime: DataPoint[];
   ordersOverTime: DataPoint[];
@@ -73,6 +76,8 @@ export default function ReportsTab() {
       setData({
         summary: {
           totalRevenue: json.summary?.totalRevenue ?? 0,
+          productRevenue: json.summary?.productRevenue ?? json.summary?.totalRevenue ?? 0,
+          deliveryRevenue: json.summary?.deliveryRevenue ?? 0,
           inventoryCost: json.summary?.inventoryCost ?? 0,
           operatingExpenses: json.summary?.operatingExpenses ?? 0,
           totalExpenses: json.summary?.totalExpenses ?? 0,
@@ -83,6 +88,7 @@ export default function ReportsTab() {
           avgOrderValue: json.summary?.avgOrderValue ?? 0,
         },
         revenueOverTime: json.revenueOverTime ?? [],
+        deliveryRevenueOverTime: json.deliveryRevenueOverTime ?? [],
         inventoryCostOverTime: json.inventoryCostOverTime ?? [],
         expensesOverTime: json.expensesOverTime ?? [],
         ordersOverTime: json.ordersOverTime ?? [],
@@ -168,9 +174,15 @@ export default function ReportsTab() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             <MetricCard
               icon={<TrendingUp size={20} />}
-              label="Revenue"
-              value={data.summary.totalRevenue}
+              label="Product Revenue"
+              value={data.summary.productRevenue}
               color="text-green-400"
+            />
+            <MetricCard
+              icon={<Truck size={20} />}
+              label="Delivery Revenue"
+              value={data.summary.deliveryRevenue}
+              color="text-yellow-400"
             />
             <MetricCard
               icon={<Package size={20} />}
@@ -238,6 +250,11 @@ export default function ReportsTab() {
               title="Operating Expenses"
               data={data.expensesOverTime}
               barColor="bg-red-500"
+            />
+            <BarChartCard
+              title="Delivery Revenue Over Time"
+              data={data.deliveryRevenueOverTime}
+              barColor="bg-yellow-500"
             />
             <BarChartCard
               title="Profit Over Time"
