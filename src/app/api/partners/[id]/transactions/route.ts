@@ -14,6 +14,7 @@ export async function GET(
       .from("partner_transactions")
       .select("*")
       .eq("partner_id", id)
+      .eq("is_test", false)
       .order("created_at", { ascending: false });
 
     if (error) {

@@ -45,7 +45,8 @@ export async function GET(request: NextRequest) {
     // --- All-time partner capital (calculator-style: not period-filtered) ---
     const { data: partnerTx } = await admin
       .from("partner_transactions")
-      .select("partner_id, amount, type");
+      .select("partner_id, amount, type")
+      .eq("is_test", false);
 
     const grossDeposits: Record<string, number> = {};
     const grossWithdrawals: Record<string, number> = {};
@@ -107,6 +108,7 @@ export async function GET(request: NextRequest) {
       .from("partner_transactions")
       .select("amount")
       .eq("type", "withdraw")
+      .eq("is_test", false)
       .gte("date", `${start}T00:00:00`)
       .lte("date", `${end}T23:59:59`);
 

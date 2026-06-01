@@ -8,7 +8,8 @@ export async function GET() {
     // --- Partner Capital ---
     const { data: partnerTx, error: pErr } = await admin
       .from("partner_transactions")
-      .select("partner_id, amount, type, date, created_at");
+      .select("partner_id, amount, type, date, created_at")
+      .eq("is_test", false);
     if (pErr) {
       const parsed = getResponseError(pErr);
       return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });

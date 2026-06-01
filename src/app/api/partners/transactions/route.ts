@@ -8,6 +8,7 @@ export async function GET() {
     const { data, error } = await admin
       .from("partner_transactions")
       .select("*")
+      .eq("is_test", false)
       .order("created_at", { ascending: false });
 
     if (error) {

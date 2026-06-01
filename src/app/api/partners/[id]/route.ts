@@ -105,7 +105,8 @@ export async function DELETE(
     const { data: tx, error: countErr } = await admin
       .from("partner_transactions")
       .select("id", { count: "exact", head: true })
-      .eq("partner_id", id);
+      .eq("partner_id", id)
+      .eq("is_test", false);
 
     if (countErr) {
       const parsed = getResponseError(countErr);

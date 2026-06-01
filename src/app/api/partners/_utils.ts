@@ -12,7 +12,8 @@ export async function computeCapital(
 ): Promise<PartnerCapital> {
   let query = admin
     .from("partner_transactions")
-    .select("partner_id, amount, type");
+    .select("partner_id, amount, type")
+    .eq("is_test", false);
 
   if (upToDate) {
     query = query.lte("date", upToDate);
@@ -131,7 +132,8 @@ export async function generateSnapshot(
 export async function getTransactionsByPartner(admin: SupabaseClient) {
   const { data: allTx } = await admin
     .from("partner_transactions")
-    .select("partner_id");
+    .select("partner_id")
+    .eq("is_test", false);
 
   const partnerIds = new Set<string>();
   for (const tx of allTx || []) {

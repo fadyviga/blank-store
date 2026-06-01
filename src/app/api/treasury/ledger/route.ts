@@ -25,6 +25,7 @@ export async function GET() {
     const { data: partnerTx } = await admin
       .from("partner_transactions")
       .select("amount, type, date, created_at, partner_id")
+      .eq("is_test", false)
       .order("date", { ascending: true, nullsFirst: false });
 
     for (const tx of partnerTx || []) {
