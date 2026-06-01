@@ -20,7 +20,9 @@ export async function GET() {
           lowStockVariants: 0, outOfStockVariants: 0, pendingOrders: 0,
           lowStockItems: [], outOfStockItems: [], recentOrders: [], revenueByMonth: [],
           todayRevenue: 0, monthlyRevenue: 0, completedOrders: 0,
-          inventoryValue: 0, netProfit: 0, advertisingSpend: 0,
+          inventoryValue: 0, inventoryCost: 0, operatingExpenses: 0,
+          totalExpenses: 0, grossProfit: 0, netProfit: 0, advertisingSpend: 0,
+          avgOrderValue: 0,
         });
       }
       return NextResponse.json({ error: parsed.cleanedMessage, orders: [] }, { status: 200 });
@@ -78,6 +80,19 @@ export async function GET() {
 
     const inventoryValue = variants?.reduce((sum, v) => sum + ((v.stock || 0) * (v.cost_price || 0)), 0) || 0;
 
+    // --- Monthly Inventory Cost from purchase_items ---
+    let monthlyInventoryCost = 0;
+    try {
+      const { data: piData, error: piErr } = await admin
+        .from("purchase_items")
+        .select("total_cost, created_at")
+        .gte("created_at", `${monthStart.slice(0, 10)}T00:00:00`);
+      if (!piErr && piData) {
+        monthlyInventoryCost = piData.reduce((sum, pi) => sum + (pi.total_cost || 0), 0);
+      }
+    } catch { /* purchase_items table may not exist */ }
+
+    // --- Expenses ---
     let expenses: any[] = [];
     try {
       const { data: eData, error: eErr } = await admin
@@ -94,7 +109,12 @@ export async function GET() {
       ?.filter((e) => ["Facebook Ads", "Instagram Ads", "TikTok Ads", "Google Ads"].includes(e.category))
       .reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
 
-    const netProfit = monthlyRevenue - monthExpenses;
+    // --- Derived monthly calculations ---
+    const operatingExpenses = monthExpenses;
+    const monthlyTotalExpenses = monthlyInventoryCost + operatingExpenses;
+    const grossProfit = monthlyRevenue - monthlyInventoryCost;
+    const netProfit = monthlyRevenue - monthlyInventoryCost - operatingExpenses;
+    const avgOrderValue = completedOrders > 0 ? monthlyRevenue / completedOrders : 0;
 
     const monthlyRevMap: Record<string, number> = {};
     orders?.forEach((o) => {
@@ -131,8 +151,13 @@ export async function GET() {
       todayRevenue,
       monthlyRevenue,
       inventoryValue,
+      inventoryCost: monthlyInventoryCost,
+      operatingExpenses,
+      totalExpenses: monthlyTotalExpenses,
+      grossProfit,
       netProfit,
       advertisingSpend,
+      avgOrderValue,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";

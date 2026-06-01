@@ -11,6 +11,8 @@ import {
   ShoppingCart,
   Calendar,
   Truck,
+  DollarSign,
+  Receipt,
   Loader2,
 } from "lucide-react";
 import { useToast } from "../components/Toast";
@@ -22,18 +24,20 @@ interface DataPoint {
 
 interface ReportSummary {
   totalRevenue: number;
-  totalExpenses: number;
   inventoryCost: number;
+  operatingExpenses: number;
+  totalExpenses: number;
   grossProfit: number;
   netProfit: number;
+  inventoryValue: number;
   totalOrders: number;
   avgOrderValue: number;
-  shippingCollected: number;
 }
 
 interface ReportData {
   summary: ReportSummary;
   revenueOverTime: DataPoint[];
+  inventoryCostOverTime: DataPoint[];
   expensesOverTime: DataPoint[];
   ordersOverTime: DataPoint[];
   profitOverTime: DataPoint[];
@@ -69,15 +73,17 @@ export default function ReportsTab() {
       setData({
         summary: {
           totalRevenue: json.summary?.totalRevenue ?? 0,
-          totalExpenses: json.summary?.totalExpenses ?? 0,
           inventoryCost: json.summary?.inventoryCost ?? 0,
+          operatingExpenses: json.summary?.operatingExpenses ?? 0,
+          totalExpenses: json.summary?.totalExpenses ?? 0,
           grossProfit: json.summary?.grossProfit ?? 0,
           netProfit: json.summary?.netProfit ?? 0,
+          inventoryValue: json.summary?.inventoryValue ?? 0,
           totalOrders: json.summary?.totalOrders ?? 0,
           avgOrderValue: json.summary?.avgOrderValue ?? 0,
-          shippingCollected: json.summary?.shippingCollected ?? 0,
         },
         revenueOverTime: json.revenueOverTime ?? [],
+        inventoryCostOverTime: json.inventoryCostOverTime ?? [],
         expensesOverTime: json.expensesOverTime ?? [],
         ordersOverTime: json.ordersOverTime ?? [],
         profitOverTime: json.profitOverTime ?? [],
@@ -162,21 +168,27 @@ export default function ReportsTab() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             <MetricCard
               icon={<TrendingUp size={20} />}
-              label="Total Revenue"
+              label="Revenue"
               value={data.summary.totalRevenue}
               color="text-green-400"
-            />
-            <MetricCard
-              icon={<TrendingDown size={20} />}
-              label="Total Expenses"
-              value={data.summary.totalExpenses}
-              color="text-red-400"
             />
             <MetricCard
               icon={<Package size={20} />}
               label="Inventory Cost"
               value={data.summary.inventoryCost}
               color="text-blue-400"
+            />
+            <MetricCard
+              icon={<Receipt size={20} />}
+              label="Operating Expenses"
+              value={data.summary.operatingExpenses}
+              color="text-red-400"
+            />
+            <MetricCard
+              icon={<DollarSign size={20} />}
+              label="Total Expenses"
+              value={data.summary.totalExpenses}
+              color="text-orange-400"
             />
             <MetricCard
               icon={<Wallet size={20} />}
@@ -191,6 +203,12 @@ export default function ReportsTab() {
               color={data.summary.netProfit >= 0 ? "text-green-400" : "text-red-400"}
             />
             <MetricCard
+              icon={<TrendingDown size={20} />}
+              label="Inventory Value"
+              value={data.summary.inventoryValue}
+              color="text-cyan-400"
+            />
+            <MetricCard
               icon={<ShoppingBag size={20} />}
               label="Total Orders"
               value={data.summary.totalOrders}
@@ -203,12 +221,6 @@ export default function ReportsTab() {
               value={data.summary.avgOrderValue}
               color="text-zinc-100"
             />
-            <MetricCard
-              icon={<Truck size={20} />}
-              label="Shipping Collected"
-              value={data.summary.shippingCollected}
-              color="text-cyan-400"
-            />
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -218,7 +230,12 @@ export default function ReportsTab() {
               barColor="bg-green-500"
             />
             <BarChartCard
-              title="Expenses Over Time"
+              title="Inventory Cost Over Time"
+              data={data.inventoryCostOverTime}
+              barColor="bg-blue-500"
+            />
+            <BarChartCard
+              title="Operating Expenses"
               data={data.expensesOverTime}
               barColor="bg-red-500"
             />
@@ -230,7 +247,7 @@ export default function ReportsTab() {
             <BarChartCard
               title="Orders Over Time"
               data={data.ordersOverTime}
-              barColor="bg-blue-500"
+              barColor="bg-zinc-400"
             />
           </div>
         </>
@@ -294,6 +311,7 @@ function BarChartCard({
   const absValues = values.map((v) => Math.abs(v));
   const maxAbsValue = Math.max(...absValues, 1);
   const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
 
   return (
     <div className="bg-zinc-950 border border-white/10 rounded-2xl p-5">
@@ -324,7 +342,7 @@ function BarChartCard({
       </div>
       <div className="flex justify-between text-[10px] text-zinc-600 mt-3 pt-2 border-t border-white/5">
         <span>{minValue.toLocaleString()} EGP</span>
-        <span>{Math.max(...values).toLocaleString()} EGP</span>
+        <span>{maxValue.toLocaleString()} EGP</span>
       </div>
     </div>
   );
