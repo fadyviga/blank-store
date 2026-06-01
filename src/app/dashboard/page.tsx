@@ -206,13 +206,27 @@ function OverviewTab({
 }) {
   const recentOrders = useMemo(() => orders.slice(0, 5), [orders]);
   const [treasuryBalance, setTreasuryBalance] = useState<number | null>(null);
+  const [salesData, setSalesData] = useState<{ totalSold: number; perProduct: { productName: string; quantitySold: number }[] } | null>(null);
+  const [inventoryData, setInventoryData] = useState<{ totalStock: number; lowStockVariants: { productName: string; stock: number }[] } | null>(null);
 
   useEffect(() => {
     fetch("/api/treasury")
       .then((r) => r.json())
       .then((d) => { if (d.cashBalance !== undefined) setTreasuryBalance(d.cashBalance); })
       .catch(() => {});
+    Promise.all([
+      fetch("/api/analytics/sales").then((r) => r.json()),
+      fetch("/api/analytics/inventory").then((r) => r.json()),
+    ])
+      .then(([sales, inventory]) => {
+        setSalesData(sales);
+        setInventoryData(inventory);
+      })
+      .catch(() => {});
   }, []);
+
+  const topSelling = useMemo(() => (salesData?.perProduct || []).slice(0, 5), [salesData]);
+  const lowStockItems = useMemo(() => (inventoryData?.lowStockVariants || []).slice(0, 5), [inventoryData]);
 
   return (
     <div className="space-y-8">
@@ -237,6 +251,61 @@ function OverviewTab({
           value={stats.pendingOrders}
           highlight={stats.pendingOrders > 0}
         />
+      </div>
+
+      {/* Inventory Overview */}
+      <div>
+        <h2 className="text-xl font-bold mb-4">Inventory Overview</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <StatCard icon={<Package size={24} />} label="Total Products Sold" value={salesData?.totalSold ?? "—"} />
+          <StatCard icon={<Package size={24} />} label="Total Stock Available" value={inventoryData?.totalStock ?? "—"} />
+          <StatCard icon={<TrendingUp size={24} />} label="Top Seller Qty" value={topSelling.length > 0 ? topSelling[0].quantitySold : "—"} />
+          <StatCard
+            icon={<AlertTriangle size={24} />}
+            label="Low Stock Items"
+            value={lowStockItems.length}
+            highlight={lowStockItems.length > 0}
+          />
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Top Selling Products */}
+          <div className="bg-zinc-950 border border-white/10 rounded-2xl p-5">
+            <h3 className="font-bold text-sm mb-3">Top Selling Products</h3>
+            {topSelling.length === 0 ? (
+              <p className="text-zinc-500 text-xs py-4 text-center">No sales data yet</p>
+            ) : (
+              <div className="space-y-2">
+                {topSelling.map((item, i) => (
+                  <div key={i} className="flex items-center justify-between border-b border-white/5 pb-2 last:border-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-zinc-500 text-xs w-4">{i + 1}.</span>
+                      <span className="text-sm">{item.productName}</span>
+                    </div>
+                    <span className="text-sm font-bold">{item.quantitySold}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Low Stock Products */}
+          <div className="bg-zinc-950 border border-white/10 rounded-2xl p-5">
+            <h3 className="font-bold text-sm mb-3">Low Stock Products</h3>
+            {lowStockItems.length === 0 ? (
+              <p className="text-zinc-500 text-xs py-4 text-center">All products well-stocked</p>
+            ) : (
+              <div className="space-y-2">
+                {lowStockItems.map((item, i) => (
+                  <div key={i} className="flex items-center justify-between border-b border-white/5 pb-2 last:border-0">
+                    <span className="text-sm">{item.productName}</span>
+                    <span className="text-sm font-bold text-yellow-400">{item.stock} left</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div>
