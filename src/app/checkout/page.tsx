@@ -149,6 +149,8 @@ export default function CheckoutPage() {
           image: item.image,
         })),
         subtotal: cartTotal,
+        deliveryFee: delivery,
+        total: Math.max(0, total),
         userId: user?.id,
         couponCode: appliedCoupon?.code,
         discountAmount: discount > 0 ? discount : undefined,

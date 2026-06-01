@@ -86,6 +86,8 @@ export async function saveOrder(order: {
     image: string;
   }>;
   subtotal: number;
+  deliveryFee: number;
+  total: number;
   userId?: string;
   couponCode?: string;
   discountAmount?: number;
@@ -94,6 +96,8 @@ export async function saveOrder(order: {
     customer: order.customer,
     itemsCount: order.items.length,
     subtotal: order.subtotal,
+    deliveryFee: order.deliveryFee,
+    total: order.total,
   });
   const result = await apiFetch<{ success: boolean; order: Order }>(
     "/orders",

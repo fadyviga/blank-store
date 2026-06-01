@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
       const ordBuckets: Record<string, number> = {};
       for (const o of orderData) {
         const rev = computeProductTotal(o.items);
-        const delivery = o.delivery ?? 0;
+        const delivery = o.delivery_fee ?? o.delivery ?? 0;
         productRevenue += rev;
         deliveryRevenue += delivery;
         const bucket = getBucket(o.created_at?.split("T")[0] || "", rangeDays);

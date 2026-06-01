@@ -253,7 +253,7 @@ export async function GET(request: NextRequest) {
         items: parsedItems,
         productTotal,
         subtotal: row.subtotal || row.total || 0,
-        delivery: row.delivery || 0,
+        delivery: row.delivery_fee ?? row.delivery ?? 0,
         total: row.total || 0,
         status: row.status || "pending",
         createdAt: row.created_at || new Date().toISOString(),
@@ -283,10 +283,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
     }
 
-    const { customer, items, subtotal, userId, couponCode, discountAmount } = body as {
+    const { customer, items, subtotal, deliveryFee, total, userId, couponCode, discountAmount } = body as {
       customer?: { name?: string; phone?: string; address?: string; email?: string };
       items?: Array<{ name: string; color?: string; size?: string; price: number; quantity: number; image?: string }>;
       subtotal?: number;
+      deliveryFee?: number;
+      total?: number;
       userId?: string;
       couponCode?: string;
       discountAmount?: number;
@@ -299,9 +301,10 @@ export async function POST(request: NextRequest) {
     if (!customer.phone?.trim()) return NextResponse.json({ error: "Customer phone is required" }, { status: 400 });
     if (!customer.address?.trim()) return NextResponse.json({ error: "Customer address is required" }, { status: 400 });
 
-    const delivery = (subtotal || 0) >= 1000 ? 0 : 50;
-    const discount = Math.max(0, discountAmount || 0);
-    const total = Math.max(0, (subtotal || 0) + delivery - discount);
+    const orderSubtotal = subtotal ?? 0;
+    const orderDelivery = deliveryFee ?? ((orderSubtotal >= 1000) ? 0 : 50);
+    const orderDiscount = Math.max(0, discountAmount ?? 0);
+    const orderTotal = total ?? Math.max(0, orderSubtotal + orderDelivery - orderDiscount);
 
     let admin;
     try {
@@ -385,20 +388,18 @@ export async function POST(request: NextRequest) {
     const idCount = enrichedItems.filter((i: any) => i.product_id && i.color_id && i.size_id).length;
     console.log(`[api/orders:${logId}] Enriched: ${enrichedCount}/${enrichedItems.length} with variant_id, ${idCount}/${enrichedItems.length} with full IDs`);
 
-    // Only use columns that exist in the actual DB schema
     const orderRow: Record<string, unknown> = {
       name: customer.name.trim(),
       phone: customer.phone.trim(),
       address: customer.address.trim(),
       items: JSON.stringify(enrichedItems),
-      subtotal: subtotal || 0,
-      delivery,
-      total,
+      subtotal: orderSubtotal,
+      delivery_fee: orderDelivery,
+      discount_amount: orderDiscount,
+      total: orderTotal,
+      coupon_code: couponCode || null,
       created_at: new Date().toISOString(),
     };
-
-    if (couponCode) orderRow.coupon_code = couponCode;
-    if (discountAmount && discountAmount > 0) orderRow.discount_amount = discountAmount;
 
     console.log(`[api/orders:${logId}] Inserting order with columns:`, Object.keys(orderRow));
 
@@ -429,14 +430,14 @@ export async function POST(request: NextRequest) {
         displayId,
         customer,
         items,
-        subtotal: subtotal || 0,
-        delivery,
-        total,
+        subtotal: orderSubtotal,
+        delivery: orderDelivery,
+        total: orderTotal,
         status: "pending",
         createdAt: new Date().toISOString(),
         userId,
         couponCode: couponCode || undefined,
-        discountAmount: discountAmount || undefined,
+        discountAmount: orderDiscount || undefined,
       },
     });
   } catch (err: unknown) {

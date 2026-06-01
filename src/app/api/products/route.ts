@@ -7,7 +7,7 @@ export async function GET() {
     const { data, error } = await admin
       .from("products")
       .select("*, product_colors(*), product_variants(*)")
-      .order("created_at", { ascending: false });
+      .order("sort_order", { ascending: true, nullsFirst: false });
 
     if (error) {
       const parsed = getResponseError(error);
@@ -26,15 +26,31 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { name, description, basePrice, category, image } = body;
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
+    }
+    const { name, description, basePrice, price, comparePrice, category, image, images, sortOrder } = body as { name?: string; description?: string; basePrice?: number; price?: number; comparePrice?: number | null; category?: string; image?: string; images?: string[]; sortOrder?: number };
     if (!name?.trim()) {
       return NextResponse.json({ error: "Product name is required" }, { status: 400 });
     }
     const admin = getAdminClient();
+    const insertRow: Record<string, unknown> = {
+      name: name.trim(),
+      description: description || "",
+      base_price: basePrice || 0,
+      price: price ?? basePrice ?? 0,
+      compare_price: comparePrice || null,
+      category: category || "tees",
+      image: image || "",
+      images: images || [],
+      sort_order: sortOrder ?? 0,
+    };
     const { data, error } = await admin
       .from("products")
-      .insert({ name: name.trim(), description: description || "", base_price: basePrice || 0, category: category || "tees", image: image || "" })
+      .insert(insertRow)
       .select()
       .single();
     if (error) {
@@ -53,17 +69,25 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { id, name, description, basePrice, category, image, images } = body;
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
+    }
+    const { id, name, description, basePrice, price, comparePrice, category, image, images, sortOrder } = body as { id?: string; name?: string; description?: string; basePrice?: number; price?: number; comparePrice?: number | null; category?: string; image?: string; images?: string[]; sortOrder?: number };
     if (!id) return NextResponse.json({ error: "Product ID is required" }, { status: 400 });
     const admin = getAdminClient();
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (name !== undefined) updates.name = name;
     if (description !== undefined) updates.description = description;
     if (basePrice !== undefined) updates.base_price = basePrice;
+    if (price !== undefined) updates.price = price;
+    if (comparePrice !== undefined) updates.compare_price = comparePrice;
     if (category !== undefined) updates.category = category;
     if (image !== undefined) updates.image = image;
     if (images !== undefined) updates.images = images;
+    if (sortOrder !== undefined) updates.sort_order = sortOrder;
     const { data, error } = await admin.from("products").update(updates).eq("id", id).select().single();
     if (error) return NextResponse.json({ error: getResponseError(error).cleanedMessage }, { status: 500 });
     return NextResponse.json(data);

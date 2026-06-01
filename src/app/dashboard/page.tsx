@@ -603,11 +603,16 @@ function ProductsTab() {
     name: string;
     description: string;
     basePrice: number;
+    price: number;
+    comparePrice: string;
     category: string;
     image: string;
-  }>({ name: "", description: "", basePrice: BASE_PRICE, category: "tees", image: "" });
+    images: string[];
+    sortOrder: number;
+  }>({ name: "", description: "", basePrice: BASE_PRICE, price: BASE_PRICE, comparePrice: "", category: "tees", image: "", images: [], sortOrder: 0 });
   const [editingProduct, setEditingProduct] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [newImageUrl, setNewImageUrl] = useState("");
   const [colorForm, setColorForm] = useState({ name: "", hex: "#000000", image: "" });
   const [sizeForm, setSizeForm] = useState("");
   const [showColorForm, setShowColorForm] = useState(false);
@@ -643,19 +648,28 @@ function ProductsTab() {
   const handleSaveProduct = async () => {
     if (!productForm.name.trim()) return;
     try {
+      const payload: Record<string, unknown> = {
+        name: productForm.name,
+        description: productForm.description,
+        basePrice: productForm.basePrice,
+        price: productForm.price,
+        comparePrice: productForm.comparePrice ? Number(productForm.comparePrice) : null,
+        category: productForm.category,
+        image: productForm.image,
+        images: productForm.images,
+        sortOrder: productForm.sortOrder,
+      };
+      if (editingProduct) payload.id = editingProduct;
       const res = await fetch("/api/products", {
         method: editingProduct ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          editingProduct
-            ? { id: editingProduct, ...productForm }
-            : productForm
-        ),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         setShowForm(false);
         setEditingProduct(null);
-        setProductForm({ name: "", description: "", basePrice: BASE_PRICE, category: "tees", image: "" });
+        setNewImageUrl("");
+        setProductForm({ name: "", description: "", basePrice: BASE_PRICE, price: BASE_PRICE, comparePrice: "", category: "tees", image: "", images: [], sortOrder: 0 });
         fetchProducts();
       }
     } catch (err) {
@@ -716,7 +730,7 @@ function ProductsTab() {
             <span className="text-xs text-zinc-500 self-center mr-2">Products table not configured.</span>
           )}
           <button
-            onClick={() => { setShowForm(!showForm); setEditingProduct(null); setProductForm({ name: "", description: "", basePrice: BASE_PRICE, category: "tees", image: "" }); }}
+            onClick={() => { setShowForm(!showForm); setEditingProduct(null); setNewImageUrl(""); setProductForm({ name: "", description: "", basePrice: BASE_PRICE, price: BASE_PRICE, comparePrice: "", category: "tees", image: "", images: [], sortOrder: 0 }); }}
             className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition"
           >
             <Plus size={16} /> Add Product
@@ -726,7 +740,7 @@ function ProductsTab() {
 
       {showForm && (
         <div className="bg-zinc-900 border border-white/10 rounded-2xl p-5 space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs text-zinc-400 mb-1">Name</label>
               <input
@@ -736,14 +750,23 @@ function ProductsTab() {
               />
             </div>
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Base Price (EGP)</label>
+              <label className="block text-xs text-zinc-400 mb-1">Price (EGP)</label>
               <input
-                type="number" value={productForm.basePrice}
-                onChange={(e) => setProductForm((p) => ({ ...p, basePrice: Number(e.target.value) }))}
+                type="number" value={productForm.price}
+                onChange={(e) => setProductForm((p) => ({ ...p, price: Number(e.target.value) }))}
                 className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30"
               />
             </div>
-            <div className="md:col-span-2">
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1">Compare Price (original)</label>
+              <input
+                type="number" value={productForm.comparePrice}
+                onChange={(e) => setProductForm((p) => ({ ...p, comparePrice: e.target.value }))}
+                placeholder="e.g. 450"
+                className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30"
+              />
+            </div>
+            <div className="md:col-span-3">
               <label className="block text-xs text-zinc-400 mb-1">Description</label>
               <textarea
                 value={productForm.description}
@@ -761,12 +784,57 @@ function ProductsTab() {
               />
             </div>
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Image URL</label>
+              <label className="block text-xs text-zinc-400 mb-1">Main Image URL</label>
               <input
                 type="text" value={productForm.image}
                 onChange={(e) => setProductForm((p) => ({ ...p, image: e.target.value }))}
                 className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30"
               />
+            </div>
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1">Sort Order</label>
+              <input
+                type="number" value={productForm.sortOrder}
+                onChange={(e) => setProductForm((p) => ({ ...p, sortOrder: Number(e.target.value) }))}
+                className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30"
+              />
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-xs text-zinc-400 mb-1">Additional Images</label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text" value={newImageUrl}
+                  onChange={(e) => setNewImageUrl(e.target.value)}
+                  placeholder="Paste image URL and add"
+                  className="flex-1 bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30"
+                />
+                <button
+                  onClick={() => {
+                    if (newImageUrl.trim()) {
+                      setProductForm((p) => ({ ...p, images: [...p.images, newImageUrl.trim()] }));
+                      setNewImageUrl("");
+                    }
+                  }}
+                  className="bg-white text-black px-4 py-3 rounded-xl text-sm font-bold"
+                >
+                  Add
+                </button>
+              </div>
+              {productForm.images.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {productForm.images.map((img, i) => (
+                    <div key={i} className="relative group">
+                      <img src={img} alt="" className="w-16 h-16 rounded-lg object-cover border border-white/10" />
+                      <button
+                        onClick={() => setProductForm((p) => ({ ...p, images: p.images.filter((_, j) => j !== i) }))}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex gap-3">
@@ -784,47 +852,84 @@ function ProductsTab() {
         {products.length === 0 ? (
           <p className="text-zinc-500 text-center py-10">No products yet. Create your first product.</p>
         ) : (
-          products.map((product) => (
-            <div key={product.id} className="bg-zinc-950 border border-white/10 rounded-2xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-bold text-lg">{product.name}</h3>
-                  <p className="text-zinc-500 text-sm">{product.category} &middot; {product.basePrice} EGP</p>
+          products.map((product) => {
+            const p = product as any;
+            const currentPrice = p.price ?? p.base_price ?? 0;
+            const comparePrice = p.compare_price;
+            const discount = comparePrice ? Math.round(((comparePrice - currentPrice) / comparePrice) * 100) : 0;
+            const productImages = p.images?.length > 0 ? p.images : p.image ? [p.image] : [];
+            return (
+              <div key={p.id} className="bg-zinc-950 border border-white/10 rounded-2xl p-5">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex gap-4 items-start">
+                    {productImages.length > 0 && (
+                      <img src={productImages[0]} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0 border border-white/10" />
+                    )}
+                    <div>
+                      <h3 className="font-bold text-lg">{p.name}</h3>
+                      <div className="flex items-center gap-2 text-sm mt-1">
+                        <span className="text-zinc-400">{p.category}</span>
+                        <span className="text-zinc-600">&middot;</span>
+                        <span className="text-white font-bold">{currentPrice} EGP</span>
+                        {comparePrice && comparePrice > currentPrice && (
+                          <>
+                            <span className="text-zinc-500 line-through text-xs">{comparePrice} EGP</span>
+                            <span className="text-xs font-bold text-green-400">-{discount}%</span>
+                          </>
+                        )}
+                        <span className="text-zinc-600">&middot;</span>
+                        <span className="text-zinc-500 text-xs">Order: {p.sort_order ?? 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <a
+                      href={`/products/${p.id}`}
+                      target="_blank"
+                      className="text-zinc-400 hover:text-white transition"
+                      title="View product page"
+                    >
+                      <Eye size={16} />
+                    </a>
+                    <button
+                      onClick={() => {
+                        setEditingProduct(p.id);
+                        setNewImageUrl("");
+                        setProductForm({
+                          name: p.name,
+                          description: p.description || "",
+                          basePrice: p.base_price ?? currentPrice,
+                          price: currentPrice,
+                          comparePrice: comparePrice ? String(comparePrice) : "",
+                          category: p.category || "tees",
+                          image: p.image || "",
+                          images: p.images || [],
+                          sortOrder: p.sort_order ?? 0,
+                        });
+                        setShowForm(true);
+                      }}
+                      className="text-zinc-400 hover:text-white transition"
+                    >
+                      <Edit3 size={16} />
+                    </button>
+                    <button onClick={() => handleDeleteProduct(p.id)} className="text-red-500 hover:text-red-400 transition">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      setEditingProduct(product.id);
-                      setProductForm({
-                        name: product.name,
-                        description: product.description || "",
-                        basePrice: product.basePrice,
-                        category: product.category || "tees",
-                        image: product.image || "",
-                      });
-                      setShowForm(true);
-                    }}
-                    className="text-zinc-400 hover:text-white transition"
-                  >
-                    <Edit3 size={16} />
-                  </button>
-                  <button onClick={() => handleDeleteProduct(product.id)} className="text-red-500 hover:text-red-400 transition">
-                    <Trash2 size={16} />
-                  </button>
+
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {colors.filter((c: any) => c.product_id === p.id).map((c: any) => (
+                    <span key={c.id} className="text-xs bg-zinc-800 px-2.5 py-1 rounded-full">
+                      {c.name}
+                    </span>
+                  ))}
                 </div>
-              </div>
 
-              <div className="flex flex-wrap gap-2 mb-3">
-                {colors.filter((c) => c.product_id === product.id).map((c) => (
-                  <span key={c.id} className="text-xs bg-zinc-800 px-2.5 py-1 rounded-full">
-                    {c.name}
-                  </span>
-                ))}
+                <VariantManager productId={p.id} colors={colors} sizes={sizes} variants={variants} onUpdate={fetchProducts} />
               </div>
-
-              <VariantManager productId={product.id} colors={colors} sizes={sizes} variants={variants} onUpdate={fetchProducts} />
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 

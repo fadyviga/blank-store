@@ -44,7 +44,7 @@ export async function GET() {
 
     const totalOrders = orders?.length || 0;
     const totalRevenue = orders?.reduce((sum, o) => sum + computeProductTotal(o.items), 0) || 0;
-    const totalShipping = orders?.reduce((sum, o) => sum + (o.delivery ?? 0), 0) || 0;
+    const totalShipping = orders?.reduce((sum, o) => sum + (o.delivery_fee ?? o.delivery ?? 0), 0) || 0;
     const deliveryRevenue = totalShipping;
     const customers = new Set(
       orders?.map((o) => o.phone || o.name || o.user_id).filter(Boolean)

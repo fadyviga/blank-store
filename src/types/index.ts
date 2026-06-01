@@ -45,9 +45,12 @@ export interface Product {
   name: string;
   description: string;
   basePrice: number;
+  price: number;
+  comparePrice: number | null;
   category: string;
   image: string;
   images: string[];
+  sortOrder: number;
   createdAt: string;
 }
 
