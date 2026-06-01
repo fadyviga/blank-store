@@ -80,9 +80,7 @@ export async function GET() {
 
     const { data, error } = await admin
       .from("purchases")
-      .select(
-        "*, purchase_items(*, products!product_id(name), product_colors!color_id(name), product_sizes!size_id(label))"
-      )
+      .select("*, purchase_items(*)")
       .order("created_at", { ascending: false });
 
     if (error) {
