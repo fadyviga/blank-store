@@ -15,9 +15,9 @@ CREATE TABLE IF NOT EXISTS capital_snapshots (
   partner_id UUID NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
   capital DECIMAL(12,2) NOT NULL CHECK (capital >= 0),
   ownership_percentage DECIMAL(5,4) NOT NULL CHECK (ownership_percentage >= 0 AND ownership_percentage <= 1),
-  effective_from DATE NOT NULL,
-  effective_to DATE,
-  is_current BOOLEAN DEFAULT false,
+  effective_from TIMESTAMPTZ NOT NULL,
+  effective_to TIMESTAMPTZ,
+  is_current BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
