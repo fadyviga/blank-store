@@ -29,14 +29,13 @@ interface Partner {
   hasTransactions: boolean;
 }
 
-interface CapitalSnapshot {
+interface CapitalTransaction {
   id: string;
   partner_id: string;
-  capital: number;
-  ownership_percentage: number;
-  effective_from: string;
-  effective_to: string | null;
-  is_current: boolean;
+  type: "initial" | "contribution" | "withdrawal";
+  amount: number;
+  note: string | null;
+  transaction_date: string;
   created_at: string;
 }
 
@@ -506,7 +505,7 @@ function PartnersListView({ showToast }: { showToast: (msg: string, type: "succe
 }
 
 function CapitalHistoryView({ showToast }: { showToast: (msg: string, type: "success" | "error") => void }) {
-  const [snapshots, setSnapshots] = useState<CapitalSnapshot[]>([]);
+  const [transactions, setTransactions] = useState<CapitalTransaction[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPartner, setSelectedPartner] = useState<string>("all");
@@ -520,15 +519,15 @@ function CapitalHistoryView({ showToast }: { showToast: (msg: string, type: "suc
         const partnersList = Array.isArray(pData) ? pData : (pData.data || []);
         setPartners(partnersList);
 
-        const allSnapshots: CapitalSnapshot[] = [];
+        const allTx: CapitalTransaction[] = [];
         for (const p of partnersList) {
           const res = await fetch(`/api/partners/${p.id}/capital-snapshots`);
           const data = await res.json();
           if (Array.isArray(data)) {
-            allSnapshots.push(...data.map((s: CapitalSnapshot) => ({ ...s, partner_id: p.id })));
+            allTx.push(...data);
           }
         }
-        setSnapshots(allSnapshots.sort((a, b) => b.effective_from.localeCompare(a.effective_from)));
+        setTransactions(allTx.sort((a, b) => b.transaction_date.localeCompare(a.transaction_date)));
       } catch (err) {
         showToast("Failed to load capital history", "error");
       }
@@ -538,12 +537,20 @@ function CapitalHistoryView({ showToast }: { showToast: (msg: string, type: "suc
   }, [showToast]);
 
   const filtered = selectedPartner === "all"
-    ? snapshots
-    : snapshots.filter((s) => s.partner_id === selectedPartner);
+    ? transactions
+    : transactions.filter((t) => t.partner_id === selectedPartner);
 
   if (loading) {
     return <div className="flex justify-center py-10"><Loader2 size={24} className="animate-spin text-zinc-500" /></div>;
   }
+
+  const typeLabel = (t: CapitalTransaction) => {
+    switch (t.type) {
+      case "initial": return <span className="text-blue-400">Initial</span>;
+      case "contribution": return <span className="text-green-400">Contribution</span>;
+      case "withdrawal": return <span className="text-red-400">Withdrawal</span>;
+    }
+  };
 
   return (
     <div>
@@ -566,36 +573,27 @@ function CapitalHistoryView({ showToast }: { showToast: (msg: string, type: "suc
           <thead>
             <tr className="border-b border-white/10">
               <th className="text-left py-3 text-zinc-500 font-medium">Partner</th>
-              <th className="text-left py-3 text-zinc-500 font-medium">Date Range</th>
-              <th className="text-right py-3 text-zinc-500 font-medium">Capital</th>
-              <th className="text-right py-3 text-zinc-500 font-medium">Ownership %</th>
-              <th className="text-right py-3 text-zinc-500 font-medium">Status</th>
+              <th className="text-left py-3 text-zinc-500 font-medium">Type</th>
+              <th className="text-right py-3 text-zinc-500 font-medium">Amount</th>
+              <th className="text-left py-3 text-zinc-500 font-medium">Date</th>
+              <th className="text-left py-3 text-zinc-500 font-medium">Note</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-10 text-zinc-500">No capital snapshots yet</td>
+                <td colSpan={5} className="text-center py-10 text-zinc-500">No capital transactions yet</td>
               </tr>
             ) : (
-              filtered.map((s) => {
-                const partner = partners.find((p) => p.id === s.partner_id);
+              filtered.map((t) => {
+                const partner = partners.find((p) => p.id === t.partner_id);
                 return (
-                  <tr key={s.id} className="border-b border-white/5">
+                  <tr key={t.id} className="border-b border-white/5">
                     <td className="py-3 font-medium">{partner?.name || "Unknown"}</td>
-                    <td className="py-3 text-zinc-300">
-                      {new Date(s.effective_from).toLocaleDateString("en-GB")}
-                      {s.effective_to ? ` → ${new Date(s.effective_to).toLocaleDateString("en-GB")}` : " → Present"}
-                    </td>
-                    <td className="py-3 text-right">{s.capital.toLocaleString()} EGP</td>
-                    <td className="py-3 text-right">{(s.ownership_percentage * 100).toFixed(2)}%</td>
-                    <td className="py-3 text-right">
-                      {s.is_current ? (
-                        <span className="text-green-400 text-xs font-medium">Current</span>
-                      ) : (
-                        <span className="text-zinc-500 text-xs">Historical</span>
-                      )}
-                    </td>
+                    <td className="py-3">{typeLabel(t)}</td>
+                    <td className="py-3 text-right">{t.amount.toLocaleString()} EGP</td>
+                    <td className="py-3 text-zinc-300">{new Date(t.transaction_date).toLocaleDateString("en-GB")}</td>
+                    <td className="py-3 text-zinc-400 text-xs max-w-[200px] truncate">{t.note || "-"}</td>
                   </tr>
                 );
               })

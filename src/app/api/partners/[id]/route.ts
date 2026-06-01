@@ -23,24 +23,27 @@ export async function GET(
       return NextResponse.json({ error: parsed.cleanedMessage }, { status: 404 });
     }
 
-    const { data: snapshot } = await admin
-      .from("capital_snapshots")
-      .select("capital, ownership_percentage, effective_from, effective_to")
-      .eq("partner_id", id)
-      .eq("is_current", true)
-      .maybeSingle();
+    const { data: tx } = await admin
+      .from("partner_capital_transactions")
+      .select("amount")
+      .eq("partner_id", id);
+
+    const { data: allTx } = await admin
+      .from("partner_capital_transactions")
+      .select("partner_id, amount");
 
     const { data: distributions } = await admin
       .from("profit_distributions")
       .select("profit_share");
 
-    const totalProfitEarned = (distributions || [])
-      .reduce((sum, d) => sum + (d.profit_share || 0), 0);
+    const partnerCapital = (tx || []).reduce((s, t) => s + Number(t.amount), 0);
+    const totalCapital = (allTx || []).reduce((s, t) => s + Number(t.amount), 0);
+    const totalProfitEarned = (distributions || []).reduce((s, d) => s + Number(d.profit_share), 0);
 
     return NextResponse.json({
       ...partner,
-      currentCapital: snapshot?.capital ?? 0,
-      ownershipPercentage: snapshot?.ownership_percentage ?? 0,
+      currentCapital: partnerCapital,
+      ownershipPercentage: totalCapital > 0 ? partnerCapital / totalCapital : 0,
       totalProfitEarned,
     });
   } catch (err) {
@@ -63,7 +66,6 @@ export async function PATCH(
 
     const admin = getAdminClient();
 
-    // Check for duplicate name
     const { data: existing } = await admin
       .from("partners")
       .select("id")
@@ -101,9 +103,8 @@ export async function DELETE(
     const { id } = await params;
     const admin = getAdminClient();
 
-    // Check for existing capital transactions
-    const { data: contributions, error: countErr } = await admin
-      .from("partner_contributions")
+    const { data: tx, error: countErr } = await admin
+      .from("partner_capital_transactions")
       .select("id", { count: "exact", head: true })
       .eq("partner_id", id);
 
@@ -112,7 +113,7 @@ export async function DELETE(
       return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });
     }
 
-    if (contributions && contributions.length > 0) {
+    if (tx && tx.length > 0) {
       return NextResponse.json(
         { error: "Cannot delete partner with transaction history" },
         { status: 400 }

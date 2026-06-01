@@ -15,7 +15,6 @@ export async function POST(request: NextRequest) {
 
     const admin = getAdminClient();
 
-    // Get all partners
     const { data: partners, error: pErr } = await admin
       .from("partners")
       .select("id, name");
@@ -29,49 +28,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No partners found" }, { status: 400 });
     }
 
-    // For each partner, find the capital snapshot that covers periodStart
-    const distributions: {
-      partner_id: string;
-      period_start: string;
-      period_end: string;
-      net_profit: number;
-      ownership_percentage: number;
-      profit_share: number;
-    }[] = [];
+    const { data: allTx } = await admin
+      .from("partner_capital_transactions")
+      .select("partner_id, amount")
+      .lte("transaction_date", periodStart);
 
-    for (const partner of partners) {
-      // Find the snapshot active at periodStart:
-      // effective_from <= periodStart AND (effective_to IS NULL OR effective_to >= periodEnd)
-      // We want the one with the LATEST effective_from that is still <= periodStart
-      const { data: snapshots, error: snapErr } = await admin
-        .from("capital_snapshots")
-        .select("capital, ownership_percentage, effective_from, effective_to")
-        .eq("partner_id", partner.id)
-        .lte("effective_from", periodStart)
-        .or(`effective_to.is.null,effective_to.gte.${periodEnd}`)
-        .order("effective_from", { ascending: false })
-        .limit(1);
+    const capitalByPartner: Record<string, number> = {};
+    let totalCapital = 0;
+    for (const tx of allTx || []) {
+      capitalByPartner[tx.partner_id] = (capitalByPartner[tx.partner_id] || 0) + Number(tx.amount);
+      totalCapital += Number(tx.amount);
+    }
 
-      if (snapErr) {
-        const parsed = getResponseError(snapErr);
-        return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });
-      }
-
-      const snapshot = snapshots?.[0];
-      const ownershipPct = snapshot?.ownership_percentage ?? 0;
-      const profitShare = Number((Number(netProfit) * ownershipPct).toFixed(2));
-
-      distributions.push({
+    const distributions = partners.map((partner) => {
+      const partnerCapital = capitalByPartner[partner.id] || 0;
+      const ownershipPct = totalCapital > 0 ? partnerCapital / totalCapital : 0;
+      return {
         partner_id: partner.id,
         period_start: periodStart,
         period_end: periodEnd,
         net_profit: Number(netProfit),
-        ownership_percentage: ownershipPct,
-        profit_share: profitShare,
-      });
-    }
+        ownership_percentage: Math.round(ownershipPct * 10000) / 10000,
+        profit_share: Number((Number(netProfit) * ownershipPct).toFixed(2)),
+      };
+    });
 
-    // Insert all distributions
     const { data: inserted, error: insErr } = await admin
       .from("profit_distributions")
       .insert(distributions)

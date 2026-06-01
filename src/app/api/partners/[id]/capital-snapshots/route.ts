@@ -10,15 +10,15 @@ export async function GET(
     const admin = getAdminClient();
 
     const { data, error } = await admin
-      .from("capital_snapshots")
+      .from("partner_capital_transactions")
       .select("*")
       .eq("partner_id", id)
-      .order("effective_from", { ascending: false });
+      .order("transaction_date", { ascending: false });
 
     if (error) {
       const parsed = getResponseError(error);
       if (parsed.tableNotFound) {
-        return NextResponse.json({ data: [], warning: "capital_snapshots table not found" });
+        return NextResponse.json({ data: [], warning: "partner_capital_transactions table not found" });
       }
       return NextResponse.json({ error: parsed.cleanedMessage, data: [] }, { status: 200 });
     }

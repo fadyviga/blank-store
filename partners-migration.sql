@@ -1,4 +1,4 @@
--- BLANK EG — Partners & Profit Sharing Migration
+-- BLANK EG — Partners & Profit Sharing v2 Migration
 -- Run this in Supabase SQL Editor
 
 -- 1. Partners table
@@ -9,29 +9,18 @@ CREATE TABLE IF NOT EXISTS partners (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Capital snapshots (immutable per period)
-CREATE TABLE IF NOT EXISTS capital_snapshots (
+-- 2. Capital transactions (every contribution/withdrawal)
+CREATE TABLE IF NOT EXISTS partner_capital_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   partner_id UUID NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
-  capital DECIMAL(12,2) NOT NULL CHECK (capital >= 0),
-  ownership_percentage DECIMAL(5,4) NOT NULL CHECK (ownership_percentage >= 0 AND ownership_percentage <= 1),
-  effective_from TIMESTAMPTZ NOT NULL,
-  effective_to TIMESTAMPTZ,
-  is_current BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 3. Partner contributions (individual capital additions)
-CREATE TABLE IF NOT EXISTS partner_contributions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  partner_id UUID NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('contribution', 'withdrawal', 'initial')),
   amount DECIMAL(12,2) NOT NULL CHECK (amount > 0),
   note TEXT,
-  contribution_date DATE NOT NULL,
+  transaction_date DATE NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. Profit distributions (calculated per partner per period)
+-- 3. Profit distributions (calculated per partner per period)
 CREATE TABLE IF NOT EXISTS profit_distributions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   partner_id UUID NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
@@ -44,11 +33,8 @@ CREATE TABLE IF NOT EXISTS profit_distributions (
 );
 
 -- Indexes
-CREATE INDEX IF NOT EXISTS idx_capital_snapshots_partner_id ON capital_snapshots(partner_id);
-CREATE INDEX IF NOT EXISTS idx_capital_snapshots_is_current ON capital_snapshots(is_current);
-CREATE INDEX IF NOT EXISTS idx_capital_snapshots_effective_from ON capital_snapshots(effective_from);
-CREATE INDEX IF NOT EXISTS idx_partner_contributions_partner_id ON partner_contributions(partner_id);
-CREATE INDEX IF NOT EXISTS idx_partner_contributions_date ON partner_contributions(contribution_date);
+CREATE INDEX IF NOT EXISTS idx_capital_tx_partner ON partner_capital_transactions(partner_id);
+CREATE INDEX IF NOT EXISTS idx_capital_tx_date ON partner_capital_transactions(transaction_date);
 CREATE INDEX IF NOT EXISTS idx_profit_distributions_partner_id ON profit_distributions(partner_id);
 CREATE INDEX IF NOT EXISTS idx_profit_distributions_period ON profit_distributions(period_start, period_end);
 
@@ -58,12 +44,30 @@ ON CONFLICT DO NOTHING;
 
 -- RLS
 ALTER TABLE partners ENABLE ROW LEVEL SECURITY;
-ALTER TABLE capital_snapshots ENABLE ROW LEVEL SECURITY;
-ALTER TABLE partner_contributions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE partner_capital_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE profit_distributions ENABLE ROW LEVEL SECURITY;
 
--- RLS policies: allow all authenticated/service-role access
+-- RLS policies
 CREATE POLICY "Allow all on partners" ON partners FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all on capital_snapshots" ON capital_snapshots FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all on partner_contributions" ON partner_contributions FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on capital_transactions" ON partner_capital_transactions FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on profit_distributions" ON profit_distributions FOR ALL USING (true) WITH CHECK (true);
+
+-- =====================================================
+-- OPTIONAL: Migrate existing data from v1 tables
+-- Run these ONLY if capital_snapshots / partner_contributions exist with data
+-- =====================================================
+
+-- Migrate latest capital snapshot as initial transaction
+-- INSERT INTO partner_capital_transactions (partner_id, type, amount, note, transaction_date, created_at)
+-- SELECT cs.partner_id, 'initial', cs.capital, 'Migrated from capital snapshot', cs.effective_from::DATE, cs.created_at
+-- FROM capital_snapshots cs
+-- WHERE cs.is_current = true;
+
+-- Migrate partner contributions as contribution transactions
+-- INSERT INTO partner_capital_transactions (partner_id, type, amount, note, transaction_date, created_at)
+-- SELECT pc.partner_id, 'contribution', pc.amount, pc.note, pc.contribution_date, pc.created_at
+-- FROM partner_contributions pc;
+
+-- Drop v1 tables (after confirming data migration)
+-- DROP TABLE IF EXISTS capital_snapshots CASCADE;
+-- DROP TABLE IF EXISTS partner_contributions CASCADE;
