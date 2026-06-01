@@ -15,7 +15,7 @@ export async function GET() {
       if (parsed.htmlResponse || parsed.tableNotFound) {
         console.error("[api/dashboard] Supabase unreachable or orders table missing:", parsed.cleanedMessage);
         return NextResponse.json({
-          totalOrders: 0, totalRevenue: 0, totalCustomers: 0,
+          totalOrders: 0, totalRevenue: 0, totalShipping: 0, totalCustomers: 0,
           totalProducts: 0, totalVariants: 0,
           lowStockVariants: 0, outOfStockVariants: 0, pendingOrders: 0,
           lowStockItems: [], outOfStockItems: [], recentOrders: [], revenueByMonth: [],
@@ -31,7 +31,12 @@ export async function GET() {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
     const totalOrders = orders?.length || 0;
-    const totalRevenue = orders?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
+    const totalRevenue = orders?.reduce((sum, o) => {
+      const total = o.total ?? 0;
+      const delivery = o.delivery ?? 0;
+      return sum + Math.max(0, total - delivery);
+    }, 0) || 0;
+    const totalShipping = orders?.reduce((sum, o) => sum + (o.delivery ?? 0), 0) || 0;
     const customers = new Set(
       orders?.map((o) => o.phone || o.name || o.user_id).filter(Boolean)
     );
@@ -39,11 +44,11 @@ export async function GET() {
 
     const todayRevenue = orders
       ?.filter((o) => o.created_at >= todayStart && o.status !== "cancelled")
-      .reduce((sum, o) => sum + (o.total || 0), 0) || 0;
+      .reduce((sum, o) => sum + Math.max(0, (o.total ?? 0) - (o.delivery ?? 0)), 0) || 0;
 
     const monthlyRevenue = orders
       ?.filter((o) => o.created_at >= monthStart && o.status !== "cancelled")
-      .reduce((sum, o) => sum + (o.total || 0), 0) || 0;
+      .reduce((sum, o) => sum + Math.max(0, (o.total ?? 0) - (o.delivery ?? 0)), 0) || 0;
 
     const completedOrders = orders?.filter((o) => o.status === "completed").length || 0;
     const pendingOrders = orders?.filter((o) => o.status === "pending").length || 0;
@@ -95,7 +100,10 @@ export async function GET() {
     orders?.forEach((o) => {
       if (o.status !== "cancelled") {
         const month = o.created_at?.slice(0, 7);
-        if (month) monthlyRevMap[month] = (monthlyRevMap[month] || 0) + (o.total || 0);
+        if (month) {
+          const productRevenue = Math.max(0, (o.total ?? 0) - (o.delivery ?? 0));
+          monthlyRevMap[month] = (monthlyRevMap[month] || 0) + productRevenue;
+        }
       }
     });
 
@@ -108,6 +116,7 @@ export async function GET() {
     return NextResponse.json({
       totalOrders,
       totalRevenue,
+      totalShipping,
       totalCustomers,
       totalProducts,
       totalVariants,

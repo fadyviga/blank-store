@@ -10,6 +10,7 @@ import {
   ShoppingBag,
   ShoppingCart,
   Calendar,
+  Truck,
   Loader2,
 } from "lucide-react";
 import { useToast } from "../components/Toast";
@@ -27,6 +28,7 @@ interface ReportSummary {
   netProfit: number;
   totalOrders: number;
   avgOrderValue: number;
+  shippingCollected: number;
 }
 
 interface ReportData {
@@ -34,6 +36,7 @@ interface ReportData {
   revenueOverTime: DataPoint[];
   expensesOverTime: DataPoint[];
   ordersOverTime: DataPoint[];
+  profitOverTime: DataPoint[];
 }
 
 type Period = "today" | "this_week" | "this_month" | "last_month" | "this_year" | "all" | "custom";
@@ -64,10 +67,20 @@ export default function ReportsTab() {
         throw new Error(json.error || "Invalid reports response");
       }
       setData({
-        summary: json.summary,
+        summary: {
+          totalRevenue: json.summary?.totalRevenue ?? 0,
+          totalExpenses: json.summary?.totalExpenses ?? 0,
+          inventoryCost: json.summary?.inventoryCost ?? 0,
+          grossProfit: json.summary?.grossProfit ?? 0,
+          netProfit: json.summary?.netProfit ?? 0,
+          totalOrders: json.summary?.totalOrders ?? 0,
+          avgOrderValue: json.summary?.avgOrderValue ?? 0,
+          shippingCollected: json.summary?.shippingCollected ?? 0,
+        },
         revenueOverTime: json.revenueOverTime ?? [],
         expensesOverTime: json.expensesOverTime ?? [],
         ordersOverTime: json.ordersOverTime ?? [],
+        profitOverTime: json.profitOverTime ?? [],
       });
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Failed to load reports", "error");
@@ -190,6 +203,12 @@ export default function ReportsTab() {
               value={data.summary.avgOrderValue}
               color="text-zinc-100"
             />
+            <MetricCard
+              icon={<Truck size={20} />}
+              label="Shipping Collected"
+              value={data.summary.shippingCollected}
+              color="text-cyan-400"
+            />
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -202,6 +221,11 @@ export default function ReportsTab() {
               title="Expenses Over Time"
               data={data.expensesOverTime}
               barColor="bg-red-500"
+            />
+            <BarChartCard
+              title="Profit Over Time"
+              data={data.profitOverTime}
+              barColor="bg-purple-500"
             />
             <BarChartCard
               title="Orders Over Time"
@@ -267,7 +291,8 @@ function BarChartCard({
   }
 
   const values = data.map((d) => d.value);
-  const maxValue = Math.max(...values);
+  const absValues = values.map((v) => Math.abs(v));
+  const maxAbsValue = Math.max(...absValues, 1);
   const minValue = Math.min(...values);
 
   return (
@@ -275,7 +300,7 @@ function BarChartCard({
       <h3 className="text-sm font-bold mb-4">{title}</h3>
       <div className="flex items-end gap-[3px] h-48">
         {data.map((point, i) => {
-          const height = maxValue > 0 ? (point.value / maxValue) * 100 : 0;
+          const height = (Math.abs(point.value) / maxAbsValue) * 100;
           return (
             <div
               key={i}
@@ -285,7 +310,9 @@ function BarChartCard({
                 {point.value.toLocaleString()} EGP
               </div>
               <div
-                className={`w-full rounded-t-sm ${barColor} transition-all duration-200 min-h-[2px] cursor-pointer`}
+                className={`w-full rounded-t-sm transition-all duration-200 min-h-[2px] cursor-pointer ${
+                  point.value >= 0 ? barColor : "bg-red-500"
+                }`}
                 style={{ height: `${height}%` }}
               />
               <span className="text-[9px] text-zinc-500 mt-1.5 truncate w-full text-center leading-tight">
@@ -297,7 +324,7 @@ function BarChartCard({
       </div>
       <div className="flex justify-between text-[10px] text-zinc-600 mt-3 pt-2 border-t border-white/5">
         <span>{minValue.toLocaleString()} EGP</span>
-        <span>{maxValue.toLocaleString()} EGP</span>
+        <span>{Math.max(...values).toLocaleString()} EGP</span>
       </div>
     </div>
   );

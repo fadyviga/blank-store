@@ -24,6 +24,7 @@ function emptySummary() {
     netProfit: 0,
     totalOrders: 0,
     avgOrderValue: 0,
+    shippingCollected: 0,
   };
 }
 
@@ -100,12 +101,14 @@ export async function GET(request: NextRequest) {
 
     let revenue = 0;
     let totalOrders = 0;
+    let shippingCollected = 0;
     let revenueOverTime: { date: string; value: number }[] = [];
     let ordersOverTime: { date: string; value: number }[] = [];
+    let profitOverTime: { date: string; value: number }[] = [];
 
     const { data: orderData, error: orderErr } = await admin
       .from("orders")
-      .select("total, created_at, status")
+      .select("total, delivery, created_at, status")
       .eq("status", "completed")
       .gte("created_at", `${start}T00:00:00`)
       .lte("created_at", `${end}T23:59:59`)
@@ -115,13 +118,21 @@ export async function GET(request: NextRequest) {
       console.error("[api/reports] Orders query error:", orderErr.message);
     } else if (orderData) {
       totalOrders = orderData.length;
-      revenue = orderData.reduce((sum, o) => sum + (o.total || 0), 0);
+      for (const o of orderData) {
+        const total = o.total ?? 0;
+        const delivery = o.delivery ?? 0;
+        revenue += Math.max(0, total - delivery);
+        shippingCollected += delivery;
+      }
 
       const revBuckets: Record<string, number> = {};
       const ordBuckets: Record<string, number> = {};
       for (const o of orderData) {
         const bucket = getBucket(o.created_at?.split("T")[0] || "", rangeDays);
-        revBuckets[bucket] = (revBuckets[bucket] || 0) + (o.total || 0);
+        const total = o.total ?? 0;
+        const delivery = o.delivery ?? 0;
+        const productRevenue = Math.max(0, total - delivery);
+        revBuckets[bucket] = (revBuckets[bucket] || 0) + productRevenue;
         ordBuckets[bucket] = (ordBuckets[bucket] || 0) + 1;
       }
       revenueOverTime = Object.entries(revBuckets)
@@ -185,6 +196,27 @@ export async function GET(request: NextRequest) {
     const netProfit = revenue - cogs - expenses;
     const averageOrderValue = totalOrders > 0 ? revenue / totalOrders : 0;
 
+    // Compute profit over time from revenue - cogs - expenses per bucket
+    const profitBuckets: Record<string, number> = {};
+    for (const r of revenueOverTime) {
+      profitBuckets[r.date] = (profitBuckets[r.date] || 0) + r.value;
+    }
+    if (purchaseData) {
+      for (const p of purchaseData) {
+        const bucket = getBucket(p.created_at?.split("T")[0] || "", rangeDays);
+        profitBuckets[bucket] = (profitBuckets[bucket] || 0) - (p.total_cost || 0);
+      }
+    }
+    if (expenseData) {
+      for (const e of expenseData) {
+        const bucket = getBucket(e.date || "", rangeDays);
+        profitBuckets[bucket] = (profitBuckets[bucket] || 0) - (e.amount || 0);
+      }
+    }
+    profitOverTime = Object.entries(profitBuckets)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, value]) => ({ date, value }));
+
     return NextResponse.json({
       summary: {
         ...emptySummary(),
@@ -195,10 +227,12 @@ export async function GET(request: NextRequest) {
         netProfit,
         totalOrders,
         avgOrderValue: averageOrderValue,
+        shippingCollected,
       },
       revenueOverTime,
       expensesOverTime,
       ordersOverTime,
+      profitOverTime,
       period: rawPeriod,
       dateRange: { start, end },
     });

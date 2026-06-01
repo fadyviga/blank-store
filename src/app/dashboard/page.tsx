@@ -82,7 +82,7 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
 
   const stats = useMemo(() => {
     const active = orders.filter((o) => o.status !== "cancelled");
-    const revenue = active.reduce((sum, o) => sum + o.total, 0);
+    const revenue = active.reduce((sum, o) => sum + Math.max(0, (o.total || 0) - (o.delivery || 0)), 0);
     const customers = new Set(orders.map((o) => o.customer?.phone).filter(Boolean));
     return {
       totalOrders: orders.length,
@@ -1413,7 +1413,7 @@ function AnalyticsTab({ orders }: { orders: Order[] }) {
   const stats = useMemo(() => {
     const completed = orders.filter((o) => o.status === "completed");
     const cancelled = orders.filter((o) => o.status === "cancelled");
-    const totalRevenue = completed.reduce((s, o) => s + o.total, 0);
+    const totalRevenue = completed.reduce((s, o) => s + Math.max(0, (o.total || 0) - (o.delivery || 0)), 0);
     const itemSales: Record<string, { name: string; qty: number; revenue: number }> = {};
 
     orders.forEach((o) => {
@@ -1433,7 +1433,10 @@ function AnalyticsTab({ orders }: { orders: Order[] }) {
     orders.forEach((o) => {
       if (o.status !== "cancelled") {
         const month = o.createdAt?.slice(0, 7);
-        if (month) monthly[month] = (monthly[month] || 0) + (o.total || 0);
+        if (month) {
+          const productRevenue = Math.max(0, (o.total || 0) - (o.delivery || 0));
+          monthly[month] = (monthly[month] || 0) + productRevenue;
+        }
       }
     });
     const monthlyRevenue = Object.entries(monthly)
