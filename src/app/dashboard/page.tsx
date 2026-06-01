@@ -85,7 +85,10 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
 
   const stats = useMemo(() => {
     const active = orders.filter((o) => o.status !== "cancelled");
-    const revenue = active.reduce((sum, o) => sum + Math.max(0, (o.total || 0) - (o.delivery || 0)), 0);
+    const revenue = active.reduce((sum, o) => {
+      const items = o.items || [];
+      return sum + items.reduce((s, item: any) => s + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
+    }, 0);
     const customers = new Set(orders.map((o) => o.customer?.phone).filter(Boolean));
     return {
       totalOrders: orders.length,
@@ -233,7 +236,7 @@ function OverviewTab({
                   <p className="font-medium text-sm">{order.customer?.name || "Unknown"}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold">{order.total} EGP</p>
+                  <p className="font-bold">{order.productTotal} EGP</p>
                   <span
                     className={`text-[10px] font-medium px-2 py-0.5 rounded-full border capitalize ${
                       STATUS_COLORS[order.status]
@@ -425,7 +428,7 @@ function OrdersTab({
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <p className="font-bold">{order.total} EGP</p>
+                    <p className="font-bold">{order.productTotal} EGP</p>
                     <p className="text-zinc-500 text-xs">
                       {order.createdAt
                         ? new Date(order.createdAt).toLocaleDateString("en-GB")
@@ -454,7 +457,7 @@ function OrdersTab({
                     </div>
                     <div>
                       <p className="text-xs text-zinc-500 mb-1 uppercase tracking-wider">Order Details</p>
-                      <p className="text-sm">Subtotal: {order.subtotal} EGP</p>
+                      <p className="text-sm">Product Total: {order.productTotal} EGP</p>
                       <p className="text-sm">Delivery: {order.delivery} EGP</p>
                       <p className="text-sm font-bold">Total: {order.total} EGP</p>
                       <p className="text-sm text-zinc-400">
@@ -1371,7 +1374,7 @@ function CustomersTab({ orders }: { orders: Order[] }) {
       <div className="grid grid-cols-3 gap-4 mb-8">
         <StatCard icon={<Users size={24} />} label="Total Customers" value={customers.length} />
         <StatCard icon={<ShoppingBag size={24} />} label="Avg Orders/Customer" value={customers.length ? (orders.length / customers.length).toFixed(1) : 0} />
-        <StatCard icon={<Wallet size={24} />} label="Avg Order Value" value={orders.length ? `${Math.round(orders.reduce((s, o) => s + o.total, 0) / orders.length)} EGP` : "0"} />
+        <StatCard icon={<Wallet size={24} />} label="Avg Order Value" value={orders.length ? `${Math.round(orders.reduce((s, o) => s + (o.productTotal || 0), 0) / orders.length)} EGP` : "0"} />
       </div>
 
       <div className="space-y-2">
@@ -1417,9 +1420,16 @@ function CustomersTab({ orders }: { orders: Order[] }) {
 
 function AnalyticsTab({ orders }: { orders: Order[] }) {
   const stats = useMemo(() => {
+    function sumItems(items: any[]): number {
+      return (items || []).reduce(
+        (s: number, item: any) => s + (Number(item.price) || 0) * (Number(item.quantity) || 1),
+        0
+      );
+    }
+
     const completed = orders.filter((o) => o.status === "completed");
     const cancelled = orders.filter((o) => o.status === "cancelled");
-    const totalRevenue = completed.reduce((s, o) => s + Math.max(0, (o.total || 0) - (o.delivery || 0)), 0);
+    const totalRevenue = completed.reduce((s, o) => s + sumItems(o.items), 0);
     const itemSales: Record<string, { name: string; qty: number; revenue: number }> = {};
 
     orders.forEach((o) => {
@@ -1440,8 +1450,7 @@ function AnalyticsTab({ orders }: { orders: Order[] }) {
       if (o.status !== "cancelled") {
         const month = o.createdAt?.slice(0, 7);
         if (month) {
-          const productRevenue = Math.max(0, (o.total || 0) - (o.delivery || 0));
-          monthly[month] = (monthly[month] || 0) + productRevenue;
+          monthly[month] = (monthly[month] || 0) + sumItems(o.items);
         }
       }
     });

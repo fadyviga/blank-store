@@ -237,6 +237,10 @@ export async function GET(request: NextRequest) {
       if (typeof row.items === "string") {
         try { parsedItems = JSON.parse(row.items); } catch { parsedItems = []; }
       }
+      const productTotal = (parsedItems || []).reduce(
+        (sum: number, item: any) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1),
+        0
+      );
       return {
         id: String(row.id),
         displayId: row.display_id || `BLK-${String(row.id).padStart(6, "0")}`,
@@ -247,6 +251,7 @@ export async function GET(request: NextRequest) {
           email: row.email || "",
         },
         items: parsedItems,
+        productTotal,
         subtotal: row.subtotal || row.total || 0,
         delivery: row.delivery || 0,
         total: row.total || 0,

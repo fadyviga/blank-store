@@ -110,9 +110,19 @@ export async function GET(request: NextRequest) {
     let deliveryRevenueOverTime: { date: string; value: number }[] = [];
     let ordersOverTime: { date: string; value: number }[] = [];
 
+    function computeProductTotal(items: unknown): number {
+      if (!items) return 0;
+      const parsed = typeof items === "string" ? JSON.parse(items as string) : items;
+      if (!Array.isArray(parsed)) return 0;
+      return parsed.reduce(
+        (sum: number, item: any) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1),
+        0
+      );
+    }
+
     const { data: orderData, error: orderErr } = await admin
       .from("orders")
-      .select("total, delivery, created_at, status")
+      .select("items, delivery, created_at, status")
       .eq("status", "completed")
       .gte("created_at", `${start}T00:00:00`)
       .lte("created_at", `${end}T23:59:59`)
@@ -126,9 +136,8 @@ export async function GET(request: NextRequest) {
       const delBuckets: Record<string, number> = {};
       const ordBuckets: Record<string, number> = {};
       for (const o of orderData) {
-        const total = o.total ?? 0;
+        const rev = computeProductTotal(o.items);
         const delivery = o.delivery ?? 0;
-        const rev = Math.max(0, total - delivery);
         productRevenue += rev;
         deliveryRevenue += delivery;
         const bucket = getBucket(o.created_at?.split("T")[0] || "", rangeDays);

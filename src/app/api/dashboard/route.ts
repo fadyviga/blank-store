@@ -28,16 +28,22 @@ export async function GET() {
       return NextResponse.json({ error: parsed.cleanedMessage, orders: [] }, { status: 200 });
     }
 
+    function computeProductTotal(itemData: unknown): number {
+      if (!itemData) return 0;
+      const parsed = typeof itemData === "string" ? JSON.parse(itemData as string) : itemData;
+      if (!Array.isArray(parsed)) return 0;
+      return parsed.reduce(
+        (sum: number, item: any) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1),
+        0
+      );
+    }
+
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
     const totalOrders = orders?.length || 0;
-    const totalRevenue = orders?.reduce((sum, o) => {
-      const total = o.total ?? 0;
-      const delivery = o.delivery ?? 0;
-      return sum + Math.max(0, total - delivery);
-    }, 0) || 0;
+    const totalRevenue = orders?.reduce((sum, o) => sum + computeProductTotal(o.items), 0) || 0;
     const totalShipping = orders?.reduce((sum, o) => sum + (o.delivery ?? 0), 0) || 0;
     const deliveryRevenue = totalShipping;
     const customers = new Set(
@@ -47,11 +53,11 @@ export async function GET() {
 
     const todayRevenue = orders
       ?.filter((o) => o.created_at >= todayStart && o.status !== "cancelled")
-      .reduce((sum, o) => sum + Math.max(0, (o.total ?? 0) - (o.delivery ?? 0)), 0) || 0;
+      .reduce((sum, o) => sum + computeProductTotal(o.items), 0) || 0;
 
     const monthlyRevenue = orders
       ?.filter((o) => o.created_at >= monthStart && o.status !== "cancelled")
-      .reduce((sum, o) => sum + Math.max(0, (o.total ?? 0) - (o.delivery ?? 0)), 0) || 0;
+      .reduce((sum, o) => sum + computeProductTotal(o.items), 0) || 0;
 
     const completedOrders = orders?.filter((o) => o.status === "completed").length || 0;
     const pendingOrders = orders?.filter((o) => o.status === "pending").length || 0;
@@ -122,8 +128,7 @@ export async function GET() {
       if (o.status !== "cancelled") {
         const month = o.created_at?.slice(0, 7);
         if (month) {
-          const productRevenue = Math.max(0, (o.total ?? 0) - (o.delivery ?? 0));
-          monthlyRevMap[month] = (monthlyRevMap[month] || 0) + productRevenue;
+          monthlyRevMap[month] = (monthlyRevMap[month] || 0) + computeProductTotal(o.items);
         }
       }
     });

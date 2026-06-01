@@ -27,6 +27,7 @@ export interface Order {
   displayId: string;
   customer: OrderCustomer;
   items: OrderItem[];
+  productTotal: number;
   subtotal: number;
   delivery: number;
   total: number;
