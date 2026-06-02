@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { validateCredentials, createSessionToken } from "@/lib/dashboard-auth";
+import { validateCredentials, createSessionToken, ensureAdminUsersTable } from "@/lib/dashboard-auth";
 
 export async function POST(request: Request) {
   try {
@@ -13,6 +13,12 @@ export async function POST(request: Request) {
     const { username, password } = body;
     if (!username || !password) {
       return NextResponse.json({ error: "Username and password required" }, { status: 400 });
+    }
+
+    // Auto-bootstrap the admin_users table if needed (RPC seeds only when empty)
+    const setupError = await ensureAdminUsersTable();
+    if (setupError) {
+      return NextResponse.json({ error: setupError }, { status: 500 });
     }
 
     const user = await validateCredentials(username.trim(), password);

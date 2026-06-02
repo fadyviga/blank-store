@@ -51,27 +51,31 @@ export async function validateCredentialsFromDb(
   }
 }
 
-const FALLBACK_USERS: Record<string, { password: string; role: "admin" | "viewer" }> = {
-  admin: { password: "blank@2026", role: "admin" },
-  data: { password: "123456789", role: "viewer" },
-};
+export async function ensureAdminUsersTable(): Promise<string | null> {
+  try {
+    const admin = getAdminClient();
 
-export function validateCredentialsFallback(
-  username: string,
-  password: string
-): { username: string; role: "admin" | "viewer" } | null {
-  const user = FALLBACK_USERS[username];
-  if (!user || user.password !== password) return null;
-  return { username, role: user.role };
+    // Try the RPC function first (created by seed migration)
+    const { error: rpcError } = await admin.rpc("ensure_admin_users");
+    if (!rpcError) return null;
+
+    // RPC doesn't exist — check if table exists directly
+    const { error: tableError } = await admin
+      .from("admin_users")
+      .select("id", { count: "exact", head: true });
+    if (!tableError) return null;
+
+    return "Database not set up. Run the migration SQL in Supabase SQL Editor first.";
+  } catch {
+    return "Failed to connect to database for auth setup.";
+  }
 }
 
 export async function validateCredentials(
   username: string,
   password: string
 ): Promise<{ username: string; role: "admin" | "viewer" } | null> {
-  const dbResult = await validateCredentialsFromDb(username, password);
-  if (dbResult) return dbResult;
-  return validateCredentialsFallback(username, password);
+  return validateCredentialsFromDb(username, password);
 }
 
 export function createSessionToken(username: string, role: string): string {
