@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual, scryptSync, randomBytes } from "crypto";
 import { NextResponse } from "next/server";
 import { getAdminClient } from "./supabase-admin";
+export { getAdminClient } from "./supabase-admin";
 
 const SECRET = process.env.DASHBOARD_AUTH_SECRET || "bl4nk-st0re-d4shb04rd-s3cr3t";
 
@@ -32,23 +33,38 @@ export async function validateCredentialsFromDb(
   username: string,
   password: string
 ): Promise<{ username: string; role: "admin" | "viewer" } | null> {
+  let admin;
   try {
-    const admin = getAdminClient();
-    const { data: user, error } = await admin
-      .from("admin_users")
-      .select("username, password_hash, role")
-      .eq("username", username)
-      .maybeSingle();
-
-    if (error || !user) return null;
-
-    const valid = verifyPassword(password, user.password_hash);
-    if (!valid) return null;
-
-    return { username: user.username, role: user.role as "admin" | "viewer" };
-  } catch {
+    admin = getAdminClient();
+  } catch (err) {
+    console.error("[auth] getAdminClient threw:", err);
     return null;
   }
+
+  const { data: user, error } = await admin
+    .from("admin_users")
+    .select("username, password_hash, role")
+    .eq("username", username)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[auth] DB query error:", error.message);
+    return null;
+  }
+
+  if (!user) {
+    console.log("[auth] user not found for:", username);
+    return null;
+  }
+
+  console.log("[auth] user found:", user.username, "role:", user.role, "hash_prefix:", user.password_hash.split(":")[0]);
+
+  const valid = verifyPassword(password, user.password_hash);
+  console.log("[auth] password match:", valid);
+
+  if (!valid) return null;
+
+  return { username: user.username, role: user.role as "admin" | "viewer" };
 }
 
 export async function ensureAdminUsersTable(): Promise<string | null> {
@@ -57,19 +73,25 @@ export async function ensureAdminUsersTable(): Promise<string | null> {
 
     // Try the RPC function first (creates table + seeds only when empty)
     const { error: rpcError } = await admin.rpc("ensure_admin_users");
-    if (!rpcError) return null;
+    if (!rpcError) {
+      console.log("[auth] RPC ensure_admin_users succeeded");
+      return null;
+    }
+    console.log("[auth] RPC not available, falling back to direct check:", rpcError.message);
 
-    // RPC doesn't exist — check if table exists
-    const { count, error: tableError } = await admin
+    // RPC doesn't exist — check if table has rows
+    const { data: existing, error: tableError } = await admin
       .from("admin_users")
-      .select("*", { count: "exact", head: true });
+      .select("id")
+      .limit(1);
 
     if (tableError) {
       return "Dashboard users table not found. Run the migration SQL in Supabase SQL Editor.";
     }
 
     // Table exists but is empty — seed the two required accounts
-    if (count !== null && count === 0) {
+    if (existing && existing.length === 0) {
+      console.log("[auth] table empty — seeding admin + viewer users");
       const adminHash = hashPassword("blank@2026");
       const dataHash = hashPassword("123456789");
       const { error: insertError } = await admin.from("admin_users").insert([
