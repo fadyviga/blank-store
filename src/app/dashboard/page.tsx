@@ -46,6 +46,7 @@ import DiscountsTab from "./DiscountsTab";
 import AnalyticsTab from "./AnalyticsTab";
 
 import PendingShortagesTab from "./PendingShortagesTab";
+import AdminUsersTab from "./AdminUsersTab";
 
 type Tab =
   | "overview"
@@ -60,7 +61,8 @@ type Tab =
   | "partners"
   | "treasury"
   | "discounts"
-  | "pending-shortages";
+  | "pending-shortages"
+  | "users";
 
 export default function DashboardPage() {
   const [userRole, setUserRole] = useState<"admin" | "viewer" | null>(null);
@@ -143,6 +145,7 @@ function AuthenticatedDashboard({ userRole, onLogout }: { userRole: "admin" | "v
     { key: "partners", label: "Partners", icon: <HandCoins size={16} /> },
     { key: "discounts", label: "Discounts", icon: <Tag size={16} /> },
     { key: "treasury", label: "Treasury", icon: <Wallet size={16} /> },
+    ...(userRole === "admin" ? [{ key: "users" as Tab, label: "Users", icon: <Users size={16} /> }] : []),
     {
       key: "pending-shortages",
       label: "Pending Shortages",
@@ -177,6 +180,8 @@ function AuthenticatedDashboard({ userRole, onLogout }: { userRole: "admin" | "v
         return <DiscountsTab userRole={role} />;
       case "treasury":
         return <TreasuryTab userRole={role} />;
+      case "users":
+        return <AdminUsersTab userRole={role} />;
       case "pending-shortages":
         return <PendingShortagesTab userRole={role} />;
     }

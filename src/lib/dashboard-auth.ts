@@ -1,26 +1,77 @@
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHmac, timingSafeEqual, scryptSync, randomBytes } from "crypto";
 import { NextResponse } from "next/server";
+import { getAdminClient } from "./supabase-admin";
 
 const SECRET = process.env.DASHBOARD_AUTH_SECRET || "bl4nk-st0re-d4shb04rd-s3cr3t";
 
-const USERS: Record<string, { password: string; role: "admin" | "viewer" }> = {
+const SESSION_DURATION_MS = 24 * 60 * 60 * 1000;
+
+export function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString("hex");
+  const derivedKey = scryptSync(password, salt, 64).toString("hex");
+  return `${salt}:${derivedKey}`;
+}
+
+export function verifyPassword(password: string, stored: string): boolean {
+  const parts = stored.split(":");
+  if (parts.length < 2) return password === stored;
+  const [salt, hash] = parts;
+  if (!salt || !hash) return false;
+  try {
+    const derivedKey = scryptSync(password, salt, 64).toString("hex");
+    const a = Buffer.from(hash);
+    const b = Buffer.from(derivedKey);
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+export async function validateCredentialsFromDb(
+  username: string,
+  password: string
+): Promise<{ username: string; role: "admin" | "viewer" } | null> {
+  try {
+    const admin = getAdminClient();
+    const { data: user, error } = await admin
+      .from("admin_users")
+      .select("username, password_hash, role")
+      .eq("username", username)
+      .maybeSingle();
+
+    if (error || !user) return null;
+
+    const valid = verifyPassword(password, user.password_hash);
+    if (!valid) return null;
+
+    return { username: user.username, role: user.role as "admin" | "viewer" };
+  } catch {
+    return null;
+  }
+}
+
+const FALLBACK_USERS: Record<string, { password: string; role: "admin" | "viewer" }> = {
   admin: { password: "blank@2026", role: "admin" },
   data: { password: "123456789", role: "viewer" },
 };
 
-const SESSION_DURATION_MS = 24 * 60 * 60 * 1000;
-
-export function getValidUsers(): Array<{ username: string; role: string }> {
-  return Object.entries(USERS).map(([username, u]) => ({ username, role: u.role }));
-}
-
-export function validateCredentials(
+export function validateCredentialsFallback(
   username: string,
   password: string
 ): { username: string; role: "admin" | "viewer" } | null {
-  const user = USERS[username];
+  const user = FALLBACK_USERS[username];
   if (!user || user.password !== password) return null;
   return { username, role: user.role };
+}
+
+export async function validateCredentials(
+  username: string,
+  password: string
+): Promise<{ username: string; role: "admin" | "viewer" } | null> {
+  const dbResult = await validateCredentialsFromDb(username, password);
+  if (dbResult) return dbResult;
+  return validateCredentialsFallback(username, password);
 }
 
 export function createSessionToken(username: string, role: string): string {
