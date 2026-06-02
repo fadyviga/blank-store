@@ -45,6 +45,7 @@ import TreasuryTab from "./TreasuryTab";
 import DiscountsTab from "./DiscountsTab";
 import AnalyticsTab from "./AnalyticsTab";
 import ShortagesTab from "./ShortagesTab";
+import PendingShortagesTab from "./PendingShortagesTab";
 
 type Tab =
   | "overview"
@@ -60,7 +61,8 @@ type Tab =
   | "partners"
   | "treasury"
   | "discounts"
-  | "shortages";
+  | "shortages"
+  | "pending-shortages";
 
 export default function DashboardPage() {
   const handleLogout = () => {
@@ -135,6 +137,11 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
       label: `Shortages${shortageCount && shortageCount > 0 ? ` (${shortageCount})` : ""}`,
       icon: <AlertTriangle size={16} />,
     },
+    {
+      key: "pending-shortages",
+      label: "Pending Shortages",
+      icon: <AlertTriangle size={16} />,
+    },
   ];
 
   const tabContent = (() => {
@@ -167,6 +174,8 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
         return <TreasuryTab />;
       case "shortages":
         return <ShortagesTab />;
+      case "pending-shortages":
+        return <PendingShortagesTab />;
     }
   })();
 
