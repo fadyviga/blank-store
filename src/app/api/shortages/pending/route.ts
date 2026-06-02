@@ -13,6 +13,14 @@ export interface PendingShortageItem {
   current_stock: number;
   missing_quantity: number;
   status_indicator: "out_of_stock" | "partial" | "full";
+  _debug?: {
+    variant_id: string | null;
+    product_id: string | null;
+    color_id: string | null;
+    size_id: string | null;
+    stock_from_db: number;
+    lookup_method: "variant_id" | "composite_id" | "text_key";
+  };
 }
 
 interface SizeOrderRef {
@@ -60,6 +68,14 @@ function parseItems(raw: unknown): any[] {
   }
   if (Array.isArray(raw)) return raw;
   return [];
+}
+
+function emptyResponse(): PendingShortagesResponse {
+  return {
+    summary: { total_pending_orders_with_shortages: 0, total_missing_units: 0, total_affected_products: 0 },
+    items: [],
+    grouped: [],
+  };
 }
 
 export async function GET() {
@@ -134,25 +150,18 @@ export async function GET() {
       }
     }
 
-    const stockByVariantId = new Map<string, number>();
-    const stockByCompositeKey = new Map<string, number>();
-
-    if (variantIds.size > 0) {
-      const { data: variantRows, error: vErr } = await admin
-        .from("product_variants")
-        .select("id, stock")
-        .in("id", [...variantIds]);
-
-      if (!vErr) {
-        for (const v of variantRows || []) {
-          stockByVariantId.set(v.id, v.stock ?? 0);
-        }
-      }
-    }
-
+    // ── Build variant lookup maps ──────────────────────────────────────────
+    // Fetch ALL variants with their FK columns explicitly included.
+    // Supabase does NOT return FK columns (product_id, color_id, size_id)
+    // unless they are listed in the select string.
     const { data: allVariants, error: allVErr } = await admin
       .from("product_variants")
-      .select("id, stock, products!product_id(name), product_colors!color_id(name), product_sizes!size_id(label)");
+      .select(
+        "id, stock, product_id, color_id, size_id, " +
+        "products!product_id(name), " +
+        "product_colors!color_id(name), " +
+        "product_sizes!size_id(label)"
+      );
 
     if (allVErr) {
       const parsed = getResponseError(allVErr);
@@ -161,34 +170,82 @@ export async function GET() {
       }
     }
 
-    for (const v of allVariants || []) {
-      const pName = (v.products as any)?.name || "";
-      const color = (v.product_colors as any)?.name || "";
-      const size = (v.product_sizes as any)?.label || "";
-      const key = `${pName}||${color}||${size}`;
-      stockByCompositeKey.set(key, (stockByCompositeKey.get(key) || 0) + (v.stock ?? 0));
+    const stockByVariantId = new Map<string, number>();
+    const stockByCompositeId = new Map<string, number>();
+    const stockByText = new Map<string, number>();
 
-      const compositeIdKey = `${(v as any).product_id}||${(v as any).color_id}||${(v as any).size_id}`;
-      if (!stockByCompositeKey.has(compositeIdKey)) {
-        stockByCompositeKey.set(compositeIdKey, v.stock ?? 0);
+    for (const v of (allVariants || []) as unknown as Array<Record<string, unknown>>) {
+      const sid = String(v.id);
+      const s = Number(v.stock) || 0;
+
+      stockByVariantId.set(sid, s);
+
+      const pId = v.product_id as string | undefined;
+      const cId = v.color_id as string | undefined;
+      const szId = v.size_id as string | undefined;
+
+      if (pId && cId && szId) {
+        const compositeKey = `${pId}||${cId}||${szId}`;
+        stockByCompositeId.set(compositeKey, s);
+      }
+
+      const pName = String((v.products as Record<string, unknown>)?.name || "");
+      const color = String((v.product_colors as Record<string, unknown>)?.name || "");
+      const size = String((v.product_sizes as Record<string, unknown>)?.label || "");
+      if (pName && color && size) {
+        const textKey = `${pName}||${color}||${size}`;
+        const existing = stockByText.get(textKey) || 0;
+        stockByText.set(textKey, existing + s);
       }
     }
 
+    console.log(
+      "[api/shortages/pending] variant maps built:",
+      JSON.stringify({
+        byVariantId: stockByVariantId.size,
+        byCompositeId: stockByCompositeId.size,
+        byText: stockByText.size,
+        totalVariants: (allVariants || []).length,
+        variantIdSample: [...stockByVariantId.entries()].slice(0, 3),
+      })
+    );
+
+    // ── Evaluate each item independently ───────────────────────────────────
     const items: PendingShortageItem[] = [];
     const affectedOrderSet = new Set<string>();
     const affectedProductSet = new Set<string>();
 
     for (const p of allParsed) {
       let stock = 0;
+      let lookupMethod: "variant_id" | "composite_id" | "text_key";
 
-      if (p.variantId && stockByVariantId.has(p.variantId)) {
-        stock = stockByVariantId.get(p.variantId)!;
+      if (p.variantId) {
+        const queried = stockByVariantId.get(p.variantId);
+        if (queried !== undefined) {
+          stock = queried;
+          lookupMethod = "variant_id";
+        } else {
+          // variant_id was set on the item but doesn't exist in the DB
+          // (possibly deleted). Fall through.
+          console.warn(
+            "[api/shortages/pending] variant_id not found in DB:",
+            p.variantId,
+            "falling back for item",
+            p.productName,
+            p.color,
+            p.size
+          );
+          stock = 0;
+          lookupMethod = "variant_id";
+        }
       } else if (p.productId && p.colorId && p.sizeId) {
-        const compositeIdKey = `${p.productId}||${p.colorId}||${p.sizeId}`;
-        stock = stockByCompositeKey.get(compositeIdKey) ?? 0;
+        const compositeKey = `${p.productId}||${p.colorId}||${p.sizeId}`;
+        stock = stockByCompositeId.get(compositeKey) ?? 0;
+        lookupMethod = "composite_id";
       } else {
         const textKey = `${p.productName}||${p.color}||${p.size}`;
-        stock = stockByCompositeKey.get(textKey) ?? 0;
+        stock = stockByText.get(textKey) ?? 0;
+        lookupMethod = "text_key";
       }
 
       const missing = Math.max(0, p.orderedQty - stock);
@@ -206,7 +263,7 @@ export async function GET() {
       affectedOrderSet.add(p.orderId);
       affectedProductSet.add(p.productName);
 
-      items.push({
+      const shortageItem: PendingShortageItem = {
         order_id: p.orderId,
         display_id: p.displayId,
         customer_name: p.customerName,
@@ -218,7 +275,29 @@ export async function GET() {
         current_stock: stock,
         missing_quantity: missing,
         status_indicator: indicator,
-      });
+        _debug: {
+          variant_id: p.variantId,
+          product_id: p.productId,
+          color_id: p.colorId,
+          size_id: p.sizeId,
+          stock_from_db: stock,
+          lookup_method: lookupMethod,
+        },
+      };
+
+      // Log every item that shows stock 0 for debugging
+      if (stock === 0) {
+        console.log(
+          "[api/shortages/pending] STOCK_ZERO:",
+          JSON.stringify(shortageItem._debug),
+          "product:",
+          p.productName,
+          p.color,
+          p.size
+        );
+      }
+
+      items.push(shortageItem);
     }
 
     const totalMissing = items.reduce((sum, i) => sum + i.missing_quantity, 0);
@@ -229,6 +308,7 @@ export async function GET() {
       total_affected_products: affectedProductSet.size,
     };
 
+    // ── Build grouped output ───────────────────────────────────────────────
     const groupMap = new Map<string, Map<string, Map<string, SizeOrderRef[]>>>();
 
     for (const item of items) {
@@ -279,12 +359,4 @@ export async function GET() {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
-
-function emptyResponse(): PendingShortagesResponse {
-  return {
-    summary: { total_pending_orders_with_shortages: 0, total_missing_units: 0, total_affected_products: 0 },
-    items: [],
-    grouped: [],
-  };
 }
