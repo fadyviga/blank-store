@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient, getResponseError } from "@/lib/supabase-admin";
+import { requireAdmin } from "@/lib/dashboard-auth";
 
 function enrichVariant(v: any) {
   const stock = v.stock ?? 0;
@@ -34,6 +35,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const access = requireAdmin(request);
+  if (access) return access;
   try {
     const body = await request.json();
     const { productId, colorId, sizeId, sku, price, stock, image } = body;
@@ -64,6 +67,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const access = requireAdmin(request);
+  if (access) return access;
   try {
     const body = await request.json();
     const { id, price, stock, sku, image } = body;
@@ -97,6 +102,8 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const access = requireAdmin(request);
+  if (access) return access;
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");

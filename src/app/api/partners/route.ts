@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient, getResponseError } from "@/lib/supabase-admin";
 import { computeCapital, getLatestSnapshot, generateSnapshot, getTransactionsByPartner } from "./_utils";
+import { requireAdmin } from "@/lib/dashboard-auth";
 
 export async function GET() {
   try {
@@ -53,6 +54,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const access = requireAdmin(request);
+  if (access) return access;
   try {
     let body: Record<string, unknown>;
     try {

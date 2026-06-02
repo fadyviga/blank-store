@@ -52,7 +52,7 @@ interface ReportData extends TreasuryData {
   periodWithdrawalsTotal: number;
 }
 
-export default function TreasuryTab() {
+export default function TreasuryTab({ userRole }: { userRole: "admin" | "viewer" }) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   return (
     <div className="space-y-6">
@@ -69,9 +69,9 @@ export default function TreasuryTab() {
           </button>
         ))}
       </div>
-      {activeTab === "overview" && <TreasuryOverview />}
-      {activeTab === "ledger" && <TreasuryLedger />}
-      {activeTab === "report" && <TreasuryReport />}
+      {activeTab === "overview" && <TreasuryOverview userRole={userRole} />}
+      {activeTab === "ledger" && <TreasuryLedger userRole={userRole} />}
+      {activeTab === "report" && <TreasuryReport userRole={userRole} />}
     </div>
   );
 }
@@ -108,7 +108,7 @@ function StatCard({
   );
 }
 
-function TreasuryOverview() {
+function TreasuryOverview({ userRole }: { userRole: "admin" | "viewer" }) {
   const [data, setData] = useState<TreasuryData | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -190,7 +190,7 @@ function TreasuryOverview() {
   );
 }
 
-function TreasuryLedger() {
+function TreasuryLedger({ userRole }: { userRole: "admin" | "viewer" }) {
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -282,7 +282,7 @@ function TreasuryLedger() {
   );
 }
 
-function TreasuryReport() {
+function TreasuryReport({ userRole }: { userRole: "admin" | "viewer" }) {
   const [period, setPeriod] = useState("this_month");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");

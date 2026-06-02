@@ -63,15 +63,39 @@ type Tab =
   | "pending-shortages";
 
 export default function DashboardPage() {
-  const handleLogout = () => {
-    document.cookie = "admin_session=; path=/; max-age=0; SameSite=Lax";
+  const [userRole, setUserRole] = useState<"admin" | "viewer" | null>(null);
+  const [roleLoading, setRoleLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.role) setUserRole(d.role);
+        else window.location.href = "/login";
+      })
+      .catch(() => { window.location.href = "/login"; })
+      .finally(() => setRoleLoading(false));
+  }, []);
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
     window.location.href = "/login";
   };
 
-  return <AuthenticatedDashboard onLogout={handleLogout} />;
+  if (roleLoading) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+        <Loader2 size={24} className="animate-spin text-zinc-500" />
+      </main>
+    );
+  }
+
+  if (!userRole) return null;
+
+  return <AuthenticatedDashboard userRole={userRole} onLogout={handleLogout} />;
 }
 
-function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
+function AuthenticatedDashboard({ userRole, onLogout }: { userRole: "admin" | "viewer"; onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,33 +151,34 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
   ];
 
   const tabContent = (() => {
+    const role = userRole;
     switch (activeTab) {
       case "overview":
         return <OverviewTab stats={stats} orders={orders} onViewOrders={() => setActiveTab("orders")} />;
       case "orders":
-        return <OrdersTab orders={orders} setOrders={setOrders} />;
+        return <OrdersTab orders={orders} setOrders={setOrders} userRole={role} />;
       case "products":
-        return <ProductsTab />;
+        return <ProductsTab userRole={role} />;
       case "inventory":
-        return <InventoryTab />;
+        return <InventoryTab userRole={role} />;
       case "customers":
         return <CustomersTab orders={orders} />;
       case "analytics":
-        return <AnalyticsTab />;
+        return <AnalyticsTab userRole={role} />;
       case "purchases":
-        return <PurchasesTab />;
+        return <PurchasesTab userRole={role} />;
       case "expenses":
-        return <ExpensesTab />;
+        return <ExpensesTab userRole={role} />;
       case "reports":
-        return <ReportsTab />;
+        return <ReportsTab userRole={role} />;
       case "partners":
-        return <PartnersTab />;
+        return <PartnersTab userRole={role} />;
       case "discounts":
-        return <DiscountsTab />;
+        return <DiscountsTab userRole={role} />;
       case "treasury":
-        return <TreasuryTab />;
+        return <TreasuryTab userRole={role} />;
       case "pending-shortages":
-        return <PendingShortagesTab />;
+        return <PendingShortagesTab userRole={role} />;
     }
   })();
 
@@ -166,6 +191,15 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
             <h1 className="text-3xl md:text-4xl font-black">Admin Dashboard</h1>
           </div>
           <div className="flex items-center gap-4">
+            <span
+              className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
+                userRole === "admin"
+                  ? "bg-blue-500/15 text-blue-400 border border-blue-500/30"
+                  : "bg-green-500/15 text-green-400 border border-green-500/30"
+              }`}
+            >
+              {userRole === "admin" ? "Admin" : "Viewer"}
+            </span>
             <button
               onClick={fetchData}
               className="flex items-center gap-2 text-xs text-zinc-400 hover:text-white transition"
@@ -362,9 +396,11 @@ function StatCard({
 function OrdersTab({
   orders,
   setOrders,
+  userRole,
 }: {
   orders: Order[];
   setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
+  userRole: "admin" | "viewer";
 }) {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [sortNewest, setSortNewest] = useState(true);
@@ -489,22 +525,32 @@ function OrdersTab({
                     <span className="text-xs font-mono text-zinc-500 tracking-wider">
                       {order.displayId}
                     </span>
-                    <select
-                      value={order.status}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) =>
-                        handleStatusChange(order.id, e.target.value as OrderStatus)
-                      }
-                      className={`text-[10px] font-medium rounded-full px-2.5 py-1 border capitalize appearance-none cursor-pointer outline-none ${
-                        STATUS_COLORS[order.status]
-                      }`}
-                    >
-                      {STATUS_OPTIONS.map((s) => (
-                        <option key={s} value={s} className="bg-zinc-900 text-white">
-                          {s}
-                        </option>
-                      ))}
-                    </select>
+                    {userRole === "admin" ? (
+                      <select
+                        value={order.status}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) =>
+                          handleStatusChange(order.id, e.target.value as OrderStatus)
+                        }
+                        className={`text-[10px] font-medium rounded-full px-2.5 py-1 border capitalize appearance-none cursor-pointer outline-none ${
+                          STATUS_COLORS[order.status]
+                        }`}
+                      >
+                        {STATUS_OPTIONS.map((s) => (
+                          <option key={s} value={s} className="bg-zinc-900 text-white">
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span
+                        className={`text-[10px] font-medium rounded-full px-2.5 py-1 border capitalize ${
+                          STATUS_COLORS[order.status]
+                        }`}
+                      >
+                        {order.status}
+                      </span>
+                    )}
                   </div>
                   <p className="font-semibold">{order.customer?.name || "Unknown"}</p>
                   <p className="text-zinc-500 text-xs">{order.customer?.phone}</p>
@@ -595,26 +641,28 @@ function OrdersTab({
                     </div>
                   )}
 
-                  <div className="flex gap-2 pt-2">
-                    <button
-                      onClick={() =>
-                        setEditModal({
-                          order,
-                          notes: order.internalNotes || "",
-                          tracking: order.trackingNumber || "",
-                        })
-                      }
-                      className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition"
-                    >
-                      <Edit3 size={14} /> Edit Details
-                    </button>
-                    <button
-                      onClick={() => handleDelete(order.id)}
-                      className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-400 transition ml-auto"
-                    >
-                      <Trash2 size={14} /> Delete
-                    </button>
-                  </div>
+                  {userRole === "admin" && (
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        onClick={() =>
+                          setEditModal({
+                            order,
+                            notes: order.internalNotes || "",
+                            tracking: order.trackingNumber || "",
+                          })
+                        }
+                        className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition"
+                      >
+                        <Edit3 size={14} /> Edit Details
+                      </button>
+                      <button
+                        onClick={() => handleDelete(order.id)}
+                        className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-400 transition ml-auto"
+                      >
+                        <Trash2 size={14} /> Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -676,7 +724,7 @@ function OrdersTab({
   );
 }
 
-function ProductsTab() {
+function ProductsTab({ userRole }: { userRole: "admin" | "viewer" }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [colors, setColors] = useState<any[]>([]);
@@ -812,12 +860,14 @@ function ProductsTab() {
           {products.length === 0 && !loading && (
             <span className="text-xs text-zinc-500 self-center mr-2">Products table not configured.</span>
           )}
-          <button
-            onClick={() => { setShowForm(!showForm); setEditingProduct(null); setNewImageUrl(""); setProductForm({ name: "", description: "", basePrice: BASE_PRICE, price: BASE_PRICE, comparePrice: "", category: "tees", image: "", images: [], sortOrder: 0 }); }}
-            className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition"
-          >
-            <Plus size={16} /> Add Product
-          </button>
+          {userRole === "admin" && (
+            <button
+              onClick={() => { setShowForm(!showForm); setEditingProduct(null); setNewImageUrl(""); setProductForm({ name: "", description: "", basePrice: BASE_PRICE, price: BASE_PRICE, comparePrice: "", category: "tees", image: "", images: [], sortOrder: 0 }); }}
+              className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition"
+            >
+              <Plus size={16} /> Add Product
+            </button>
+          )}
         </div>
       </div>
 
@@ -974,30 +1024,34 @@ function ProductsTab() {
                     >
                       <Eye size={16} />
                     </a>
-                    <button
-                      onClick={() => {
-                        setEditingProduct(p.id);
-                        setNewImageUrl("");
-                        setProductForm({
-                          name: p.name,
-                          description: p.description || "",
-                          basePrice: p.base_price ?? currentPrice,
-                          price: currentPrice,
-                          comparePrice: comparePrice ? String(comparePrice) : "",
-                          category: p.category || "tees",
-                          image: p.image || "",
-                          images: p.images || [],
-                          sortOrder: p.sort_order ?? 0,
-                        });
-                        setShowForm(true);
-                      }}
-                      className="text-zinc-400 hover:text-white transition"
-                    >
-                      <Edit3 size={16} />
-                    </button>
-                    <button onClick={() => handleDeleteProduct(p.id)} className="text-red-500 hover:text-red-400 transition">
-                      <Trash2 size={16} />
-                    </button>
+                    {userRole === "admin" && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEditingProduct(p.id);
+                            setNewImageUrl("");
+                            setProductForm({
+                              name: p.name,
+                              description: p.description || "",
+                              basePrice: p.base_price ?? currentPrice,
+                              price: currentPrice,
+                              comparePrice: comparePrice ? String(comparePrice) : "",
+                              category: p.category || "tees",
+                              image: p.image || "",
+                              images: p.images || [],
+                              sortOrder: p.sort_order ?? 0,
+                            });
+                            setShowForm(true);
+                          }}
+                          className="text-zinc-400 hover:text-white transition"
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                        <button onClick={() => handleDeleteProduct(p.id)} className="text-red-500 hover:text-red-400 transition">
+                          <Trash2 size={16} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -1009,7 +1063,7 @@ function ProductsTab() {
                   ))}
                 </div>
 
-                <VariantManager productId={p.id} colors={colors} sizes={sizes} variants={variants} onUpdate={fetchProducts} />
+                <VariantManager productId={p.id} colors={colors} sizes={sizes} variants={variants} onUpdate={fetchProducts} userRole={userRole} />
               </div>
             );
           })
@@ -1021,9 +1075,11 @@ function ProductsTab() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold">Colors</h3>
-              <button onClick={() => setShowColorForm(!showColorForm)} className="text-xs text-zinc-400 hover:text-white transition flex items-center gap-1">
-                <Plus size={14} /> Add Color
-              </button>
+              {userRole === "admin" && (
+                <button onClick={() => setShowColorForm(!showColorForm)} className="text-xs text-zinc-400 hover:text-white transition flex items-center gap-1">
+                  <Plus size={14} /> Add Color
+                </button>
+              )}
             </div>
             {showColorForm && (
               <div className="flex gap-2 mb-4">
@@ -1055,9 +1111,11 @@ function ProductsTab() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold">Sizes</h3>
-              <button onClick={() => setShowSizeForm(!showSizeForm)} className="text-xs text-zinc-400 hover:text-white transition flex items-center gap-1">
-                <Plus size={14} /> Add Size
-              </button>
+              {userRole === "admin" && (
+                <button onClick={() => setShowSizeForm(!showSizeForm)} className="text-xs text-zinc-400 hover:text-white transition flex items-center gap-1">
+                  <Plus size={14} /> Add Size
+                </button>
+              )}
             </div>
             {showSizeForm && (
               <div className="flex gap-2 mb-4">
@@ -1091,12 +1149,14 @@ function VariantManager({
   sizes,
   variants,
   onUpdate,
+  userRole,
 }: {
   productId: string;
   colors: any[];
   sizes: any[];
   variants: ProductVariant[];
   onUpdate: () => void;
+  userRole: "admin" | "viewer";
 }) {
   const productVariants = variants.filter((v: any) => v.product_id === productId);
   const [editVariant, setEditVariant] = useState<{
@@ -1169,33 +1229,49 @@ function VariantManager({
                   return (
                     <td key={size.id} className="text-center py-2">
                       {variant ? (
-                        <button
-                          onClick={() =>
-                            setEditVariant({
-                              id: variant.id,
-                              stock: variant.stock,
-                              price: variant.price,
-                              sku: variant.sku,
-                            })
-                          }
-                          className={`px-2 py-1 rounded-lg text-xs font-medium transition ${
+                        userRole === "admin" ? (
+                          <button
+                            onClick={() =>
+                              setEditVariant({
+                                id: variant.id,
+                                stock: variant.stock,
+                                price: variant.price,
+                                sku: variant.sku,
+                              })
+                            }
+                            className={`px-2 py-1 rounded-lg text-xs font-medium transition ${
+                              variant.stock <= 0
+                                ? "bg-red-500/10 text-red-400"
+                                : variant.stock <= 5
+                                ? "bg-yellow-500/10 text-yellow-400"
+                                : "bg-green-500/10 text-green-400"
+                            }`}
+                          >
+                            {variant.stock}
+                          </button>
+                        ) : (
+                          <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
                             variant.stock <= 0
                               ? "bg-red-500/10 text-red-400"
                               : variant.stock <= 5
                               ? "bg-yellow-500/10 text-yellow-400"
                               : "bg-green-500/10 text-green-400"
-                          }`}
-                        >
-                          {variant.stock}
-                        </button>
+                          }`}>
+                            {variant.stock}
+                          </span>
+                        )
                       ) : (
-                        <button
-                          onClick={() => handleCreateVariant(color.id, size.id)}
-                          className="text-zinc-600 hover:text-zinc-400 transition"
-                          title="Create variant"
-                        >
-                          <Plus size={14} />
-                        </button>
+                        userRole === "admin" ? (
+                          <button
+                            onClick={() => handleCreateVariant(color.id, size.id)}
+                            className="text-zinc-600 hover:text-zinc-400 transition"
+                            title="Create variant"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        ) : (
+                          <span className="text-zinc-600 text-xs">—</span>
+                        )
                       )}
                     </td>
                   );
@@ -1286,7 +1362,7 @@ function StockControls({ v, updating, onUpdate }: {
   );
 }
 
-function InventoryTab() {
+function InventoryTab({ userRole }: { userRole: "admin" | "viewer" }) {
   const { showToast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
@@ -1388,6 +1464,7 @@ function InventoryTab() {
         <StatCard icon={<AlertTriangle size={24} />} label="Out of Stock" value={outOfStockVariants.length} highlight={outOfStockVariants.length > 0} />
       </div>
 
+      {userRole === "admin" && (
       <div className="bg-zinc-950 border border-white/10 rounded-2xl">
         <button
           onClick={() => setShowBulk(!showBulk)}
@@ -1433,6 +1510,7 @@ function InventoryTab() {
           </div>
         )}
       </div>
+      )}
 
       {outOfStockVariants.length > 0 && (
         <div>
@@ -1446,7 +1524,15 @@ function InventoryTab() {
                   <p className="text-sm font-medium">{v.product_colors?.name} / {v.product_sizes?.label}</p>
                   <p className="text-xs text-zinc-500">SKU: {v.sku}</p>
                 </div>
-                <StockControls v={v} updating={updating(v.id)} onUpdate={updateStock} />
+                {userRole === "admin" ? (
+                  <StockControls v={v} updating={updating(v.id)} onUpdate={updateStock} />
+                ) : (
+                  <span className={`text-sm font-bold ${
+                    v.stock <= 0 ? "text-red-400" : v.stock <= 5 ? "text-yellow-400" : ""
+                  }`}>
+                    {v.stock}
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -1465,7 +1551,15 @@ function InventoryTab() {
                   <p className="text-sm font-medium">{v.product_colors?.name} / {v.product_sizes?.label}</p>
                   <p className="text-xs text-zinc-500">SKU: {v.sku}</p>
                 </div>
-                <StockControls v={v} updating={updating(v.id)} onUpdate={updateStock} />
+                {userRole === "admin" ? (
+                  <StockControls v={v} updating={updating(v.id)} onUpdate={updateStock} />
+                ) : (
+                  <span className={`text-sm font-bold ${
+                    v.stock <= 0 ? "text-red-400" : v.stock <= 5 ? "text-yellow-400" : ""
+                  }`}>
+                    {v.stock}
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -1493,7 +1587,15 @@ function InventoryTab() {
                   <td className="py-3">{v.product_sizes?.label}</td>
                   <td className="py-3 text-zinc-500 text-xs font-mono">{v.sku}</td>
                   <td className="py-3 text-right">
-                    <StockControls v={v} updating={updating(v.id)} onUpdate={updateStock} />
+                    {userRole === "admin" ? (
+                      <StockControls v={v} updating={updating(v.id)} onUpdate={updateStock} />
+                    ) : (
+                      <span className={`text-sm font-bold ${
+                        v.stock <= 0 ? "text-red-400" : v.stock <= 5 ? "text-yellow-400" : ""
+                      }`}>
+                        {v.stock}
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}

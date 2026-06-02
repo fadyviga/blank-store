@@ -45,7 +45,7 @@ interface Size {
   label: string;
 }
 
-export default function PurchasesTab() {
+export default function PurchasesTab({ userRole }: { userRole: "admin" | "viewer" }) {
   const { showToast } = useToast();
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
@@ -204,12 +204,14 @@ export default function PurchasesTab() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">Purchases</h2>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition"
-        >
-          <Plus size={16} /> New Purchase
-        </button>
+        {userRole === "admin" && (
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition"
+          >
+            <Plus size={16} /> New Purchase
+          </button>
+        )}
       </div>
 
       {showForm && (
@@ -345,24 +347,28 @@ export default function PurchasesTab() {
                   </div>
 
                   <div className="flex justify-end mt-2">
-                    <button
-                      onClick={() => removeItem(index)}
-                      disabled={items.length === 1}
-                      className="text-xs text-red-500 hover:text-red-400 transition flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <X size={14} /> Remove
-                    </button>
+                    {userRole === "admin" && (
+                      <button
+                        onClick={() => removeItem(index)}
+                        disabled={items.length === 1}
+                        className="text-xs text-red-500 hover:text-red-400 transition flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <X size={14} /> Remove
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
 
-            <button
-              onClick={addItem}
-              className="mt-3 flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition"
-            >
-              <Plus size={14} /> Add Item
-            </button>
+            {userRole === "admin" && (
+              <button
+                onClick={addItem}
+                className="mt-3 flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition"
+              >
+                <Plus size={14} /> Add Item
+              </button>
+            )}
           </div>
 
           <div className="border-t border-white/10 pt-4 flex items-center justify-between">
@@ -377,18 +383,20 @@ export default function PurchasesTab() {
               >
                 Cancel
               </button>
-              <button
-                onClick={handleCreatePurchase}
-                disabled={submitting}
-                className="bg-white text-black px-5 py-2.5 rounded-xl text-sm font-bold hover:scale-[1.02] transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <Save size={16} />
-                )}
-                Create Purchase
-              </button>
+              {userRole === "admin" && (
+                <button
+                  onClick={handleCreatePurchase}
+                  disabled={submitting}
+                  className="bg-white text-black px-5 py-2.5 rounded-xl text-sm font-bold hover:scale-[1.02] transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Save size={16} />
+                  )}
+                  Create Purchase
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -475,12 +483,14 @@ export default function PurchasesTab() {
                     )}
 
                     <div className="flex gap-2 pt-2">
-                      <button
-                        onClick={() => handleDeletePurchase(purchase.id)}
-                        className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-400 transition ml-auto"
-                      >
-                        <Trash2 size={14} /> Delete
-                      </button>
+                      {userRole === "admin" && (
+                        <button
+                          onClick={() => handleDeletePurchase(purchase.id)}
+                          className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-400 transition ml-auto"
+                        >
+                          <Trash2 size={14} /> Delete
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}

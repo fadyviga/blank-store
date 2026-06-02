@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient, getResponseError } from "@/lib/supabase-admin";
 import { getSnapshotsInRange, getSnapshotAtDate } from "../_utils";
+import { requireAdmin } from "@/lib/dashboard-auth";
 
 export async function POST(request: NextRequest) {
+  const access = requireAdmin(request);
+  if (access) return access;
   try {
     const body = await request.json();
     const { periodStart, periodEnd, netProfit } = body;

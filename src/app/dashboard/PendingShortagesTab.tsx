@@ -59,7 +59,7 @@ interface PendingShortagesData {
   grouped: ProductGroup[];
 }
 
-export default function PendingShortagesTab() {
+export default function PendingShortagesTab({ userRole }: { userRole: "admin" | "viewer" }) {
   const [data, setData] = useState<PendingShortagesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);

@@ -13,7 +13,7 @@ interface Coupon {
   created_at: string;
 }
 
-export default function DiscountsTab() {
+export default function DiscountsTab({ userRole }: { userRole: "admin" | "viewer" }) {
   const { showToast } = useToast();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,12 +89,14 @@ export default function DiscountsTab() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">Discount Codes</h2>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition"
-        >
-          <Plus size={16} /> Create Coupon
-        </button>
+        {userRole === "admin" && (
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition"
+          >
+            <Plus size={16} /> Create Coupon
+          </button>
+        )}
       </div>
 
       <div className="overflow-x-auto">
@@ -131,9 +133,11 @@ export default function DiscountsTab() {
                     {coupon.created_at ? new Date(coupon.created_at).toLocaleDateString("en-GB") : ""}
                   </td>
                   <td className="py-3 text-right">
-                    <button onClick={() => handleDelete(coupon.id)} className="text-red-500 hover:text-red-400 transition">
-                      <Trash2 size={14} />
-                    </button>
+                    {userRole === "admin" && (
+                      <button onClick={() => handleDelete(coupon.id)} className="text-red-500 hover:text-red-400 transition">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))

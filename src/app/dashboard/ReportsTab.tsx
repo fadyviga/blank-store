@@ -48,7 +48,7 @@ interface ReportData {
 
 type Period = "today" | "this_week" | "this_month" | "last_month" | "this_year" | "all" | "custom";
 
-export default function ReportsTab() {
+export default function ReportsTab({ userRole }: { userRole: "admin" | "viewer" }) {
   const { showToast } = useToast();
   const [period, setPeriod] = useState<Period>("this_month");
   const [startDate, setStartDate] = useState("");

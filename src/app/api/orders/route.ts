@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient, getResponseError, isHtmlResponse } from "@/lib/supabase-admin";
 import { sendOrderConfirmationEmail } from "@/lib/email";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { requireAdmin } from "@/lib/dashboard-auth";
 
 const WHATSAPP_NUMBER = "201287659463";
 
@@ -274,6 +275,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const access = requireAdmin(request);
+  if (access) return access;
   const logId = Date.now().toString(36);
 
   try {
@@ -472,6 +475,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const access = requireAdmin(request);
+  if (access) return access;
   const logId = Date.now().toString(36);
 
   try {
@@ -609,6 +614,8 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const access = requireAdmin(request);
+  if (access) return access;
   const logId = Date.now().toString(36);
 
   try {

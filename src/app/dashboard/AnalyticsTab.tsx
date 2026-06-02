@@ -12,7 +12,7 @@ interface ReportSummary {
   profitOverTime: { date: string; value: number }[];
 }
 
-export default function AnalyticsTab() {
+export default function AnalyticsTab({ userRole }: { userRole: "admin" | "viewer" }) {
   const [period, setPeriod] = useState("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");

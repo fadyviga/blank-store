@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient, getResponseError } from "@/lib/supabase-admin";
+import { requireAdmin } from "@/lib/dashboard-auth";
 
 export async function PATCH(request: NextRequest) {
+  const access = requireAdmin(request);
+  if (access) return access;
   try {
     let body: Record<string, unknown>;
     try {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient, getResponseError } from "@/lib/supabase-admin";
+import { requireAdmin } from "@/lib/dashboard-auth";
 
 type PurchaseItemInput = {
   product_id: string | null;
@@ -98,6 +99,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const access = requireAdmin(request);
+  if (access) return access;
   const logId = Date.now().toString(36);
 
   try {
@@ -284,6 +287,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const access = requireAdmin(request);
+  if (access) return access;
   const id = new URL(request.url).searchParams.get("id");
 
   if (!id) {

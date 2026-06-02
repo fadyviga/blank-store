@@ -20,15 +20,25 @@ export default function AdminLoginPage() {
 
     setLoading(true);
 
-    await new Promise((r) => setTimeout(r, 300));
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
 
-    if (username.trim() === "admin" && password === "blank@2026") {
-      document.cookie = "admin_session=true; path=/; max-age=86400; SameSite=Lax";
-      window.location.href = "/dashboard";
-    } else {
-      setError("Invalid credentials");
-      setLoading(false);
+      const data = await res.json();
+
+      if (res.ok) {
+        window.location.href = "/dashboard";
+      } else {
+        setError(data.error || "Invalid credentials");
+      }
+    } catch {
+      setError("Network error. Please try again.");
     }
+
+    setLoading(false);
   };
 
   return (

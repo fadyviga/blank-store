@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient, getResponseError } from "@/lib/supabase-admin";
 import { generateSnapshot, computeCapital } from "../../_utils";
+import { requireAdmin } from "@/lib/dashboard-auth";
 
 export async function GET(
   _request: NextRequest,
@@ -35,6 +36,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const access = requireAdmin(request);
+  if (access) return access;
   try {
     const { id } = await params;
 

@@ -100,7 +100,7 @@ type Period = "this_month" | "last_month" | "this_year" | "custom";
 
 type TabKey = "overview" | "transactions" | "ownership-history" | "profit-distribution";
 
-export default function PartnersTab() {
+export default function PartnersTab({ userRole }: { userRole: "admin" | "viewer" }) {
   const { showToast } = useToast();
   const [activeSubTab, setActiveSubTab] = useState<TabKey>("overview");
 
@@ -130,15 +130,15 @@ export default function PartnersTab() {
         ))}
       </div>
 
-      {activeSubTab === "overview" && <OverviewView showToast={showToast} />}
+      {activeSubTab === "overview" && <OverviewView showToast={showToast} userRole={userRole} />}
       {activeSubTab === "transactions" && <TransactionsView showToast={showToast} />}
       {activeSubTab === "ownership-history" && <OwnershipHistoryView showToast={showToast} />}
-      {activeSubTab === "profit-distribution" && <ProfitDistributionView showToast={showToast} />}
+      {activeSubTab === "profit-distribution" && <ProfitDistributionView showToast={showToast} userRole={userRole} />}
     </div>
   );
 }
 
-function OverviewView({ showToast }: { showToast: (msg: string, type: "success" | "error") => void }) {
+function OverviewView({ showToast, userRole }: { showToast: (msg: string, type: "success" | "error") => void; userRole: "admin" | "viewer" }) {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [ledger, setLedger] = useState<PartnerLedger[]>([]);
   const [loading, setLoading] = useState(true);
@@ -347,18 +347,22 @@ function OverviewView({ showToast }: { showToast: (msg: string, type: "success" 
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-bold text-lg">Partners</h3>
         <div className="flex gap-2">
-          <button
-            onClick={() => setResetModal(true)}
-            className="flex items-center gap-2 border border-red-500/30 text-red-400 px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-900/20 transition"
-          >
-            Reset Capital
-          </button>
-          <button
-            onClick={() => setShowAddPartner(true)}
-            className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition"
-          >
-            <Plus size={16} /> Add Partner
-          </button>
+          {userRole === "admin" && (
+            <button
+              onClick={() => setResetModal(true)}
+              className="flex items-center gap-2 border border-red-500/30 text-red-400 px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-900/20 transition"
+            >
+              Reset Capital
+            </button>
+          )}
+          {userRole === "admin" && (
+            <button
+              onClick={() => setShowAddPartner(true)}
+              className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition"
+            >
+              <Plus size={16} /> Add Partner
+            </button>
+          )}
         </div>
       </div>
 
@@ -389,18 +393,26 @@ function OverviewView({ showToast }: { showToast: (msg: string, type: "success" 
                   <td className="py-3 text-right text-red-400">{p.totalWithdrawals?.toLocaleString() || "—"}</td>
                   <td className="py-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                      <button onClick={() => { setTxModal({ partnerId: p.id, partnerName: p.name }); setTxType("deposit"); setTxAmount(""); setTxDate(""); }} className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg transition" title="Deposit">
-                        <ArrowUpRight size={14} />
-                      </button>
-                      <button onClick={() => { setTxModal({ partnerId: p.id, partnerName: p.name }); setTxType("withdraw"); setTxAmount(""); setTxDate(""); }} className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg transition" title="Withdraw">
-                        <ArrowDownRight size={14} />
-                      </button>
-                      <button onClick={() => { setEditPartner({ id: p.id, name: p.name }); setEditName(p.name); }} className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 p-1.5 rounded-lg transition" title="Edit">
-                        <Edit3 size={14} />
-                      </button>
-                      <button onClick={() => handleDeletePartner(p)} className="text-xs bg-zinc-800 hover:bg-red-900/50 text-zinc-300 hover:text-red-400 p-1.5 rounded-lg transition" title={p.hasTransactions ? "Cannot delete partner with transaction history" : "Delete"}>
-                        <Trash2 size={14} />
-                      </button>
+                      {userRole === "admin" && (
+                        <button onClick={() => { setTxModal({ partnerId: p.id, partnerName: p.name }); setTxType("deposit"); setTxAmount(""); setTxDate(""); }} className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg transition" title="Deposit">
+                          <ArrowUpRight size={14} />
+                        </button>
+                      )}
+                      {userRole === "admin" && (
+                        <button onClick={() => { setTxModal({ partnerId: p.id, partnerName: p.name }); setTxType("withdraw"); setTxAmount(""); setTxDate(""); }} className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg transition" title="Withdraw">
+                          <ArrowDownRight size={14} />
+                        </button>
+                      )}
+                      {userRole === "admin" && (
+                        <button onClick={() => { setEditPartner({ id: p.id, name: p.name }); setEditName(p.name); }} className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 p-1.5 rounded-lg transition" title="Edit">
+                          <Edit3 size={14} />
+                        </button>
+                      )}
+                      {userRole === "admin" && (
+                        <button onClick={() => handleDeletePartner(p)} className="text-xs bg-zinc-800 hover:bg-red-900/50 text-zinc-300 hover:text-red-400 p-1.5 rounded-lg transition" title={p.hasTransactions ? "Cannot delete partner with transaction history" : "Delete"}>
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -722,7 +734,7 @@ function OwnershipHistoryView({ showToast }: { showToast: (msg: string, type: "s
   );
 }
 
-function ProfitDistributionView({ showToast }: { showToast: (msg: string, type: "success" | "error") => void }) {
+function ProfitDistributionView({ showToast, userRole }: { showToast: (msg: string, type: "success" | "error") => void; userRole: "admin" | "viewer" }) {
   const [partners, setPartners] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [distributing, setDistributing] = useState(false);
@@ -851,14 +863,16 @@ function ProfitDistributionView({ showToast }: { showToast: (msg: string, type: 
               className="bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-white/30 transition" />
           </div>
         )}
-        <button
-          onClick={handleDistributeProfit}
-          disabled={distributing}
-          className="ml-auto flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition disabled:opacity-50"
-        >
-          {distributing ? <Loader2 size={16} className="animate-spin" /> : <HandCoins size={16} />}
-          Calculate Distribution
-        </button>
+        {userRole === "admin" && (
+          <button
+            onClick={handleDistributeProfit}
+            disabled={distributing}
+            className="ml-auto flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition disabled:opacity-50"
+          >
+            {distributing ? <Loader2 size={16} className="animate-spin" /> : <HandCoins size={16} />}
+            Calculate Distribution
+          </button>
+        )}
       </div>
 
       {result ? (

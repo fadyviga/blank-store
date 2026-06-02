@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient, getResponseError } from "@/lib/supabase-admin";
+import { requireAdmin } from "@/lib/dashboard-auth";
 
 export async function GET() {
   try {
@@ -28,6 +29,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const access = requireAdmin(request);
+  if (access) return access;
   const logId = Date.now().toString(36);
 
   try {
@@ -155,6 +158,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const access = requireAdmin(request);
+  if (access) return access;
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");

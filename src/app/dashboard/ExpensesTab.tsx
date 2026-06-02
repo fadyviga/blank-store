@@ -45,7 +45,7 @@ const defaultForm = {
   date: new Date().toISOString().slice(0, 10),
 };
 
-export default function ExpensesTab() {
+export default function ExpensesTab({ userRole }: { userRole: "admin" | "viewer" }) {
   const { showToast } = useToast();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -203,12 +203,14 @@ export default function ExpensesTab() {
             </button>
           )}
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition shrink-0"
-        >
-          <Plus size={16} /> Add Expense
-        </button>
+        {userRole === "admin" && (
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition shrink-0"
+          >
+            <Plus size={16} /> Add Expense
+          </button>
+        )}
       </div>
 
       {/* Expenses Table */}
@@ -246,14 +248,18 @@ export default function ExpensesTab() {
                   </td>
                   <td className="py-3 text-zinc-500 max-w-[200px] truncate">{expense.notes || ""}</td>
                   <td className="py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => openEdit(expense)} className="text-zinc-400 hover:text-white transition">
-                        <Edit3 size={14} />
-                      </button>
-                      <button onClick={() => handleDelete(expense.id)} className="text-red-500 hover:text-red-400 transition">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+                    {userRole === "admin" ? (
+                      <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => openEdit(expense)} className="text-zinc-400 hover:text-white transition">
+                          <Edit3 size={14} />
+                        </button>
+                        <button onClick={() => handleDelete(expense.id)} className="text-red-500 hover:text-red-400 transition">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-zinc-600 text-xs">—</span>
+                    )}
                   </td>
                 </tr>
               ))
