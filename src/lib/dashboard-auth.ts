@@ -55,19 +55,35 @@ export async function ensureAdminUsersTable(): Promise<string | null> {
   try {
     const admin = getAdminClient();
 
-    // Try the RPC function first (created by seed migration)
+    // Try the RPC function first (creates table + seeds only when empty)
     const { error: rpcError } = await admin.rpc("ensure_admin_users");
     if (!rpcError) return null;
 
-    // RPC doesn't exist — check if table exists directly
-    const { error: tableError } = await admin
+    // RPC doesn't exist — check if table exists
+    const { count, error: tableError } = await admin
       .from("admin_users")
-      .select("id", { count: "exact", head: true });
-    if (!tableError) return null;
+      .select("*", { count: "exact", head: true });
 
-    return "Database not set up. Run the migration SQL in Supabase SQL Editor first.";
-  } catch {
-    return "Failed to connect to database for auth setup.";
+    if (tableError) {
+      return "Dashboard users table not found. Run the migration SQL in Supabase SQL Editor.";
+    }
+
+    // Table exists but is empty — seed the two required accounts
+    if (count !== null && count === 0) {
+      const adminHash = hashPassword("blank@2026");
+      const dataHash = hashPassword("123456789");
+      const { error: insertError } = await admin.from("admin_users").insert([
+        { username: "admin", password_hash: adminHash, role: "admin" },
+        { username: "data", password_hash: dataHash, role: "viewer" },
+      ]);
+      if (insertError) {
+        return "Failed to seed admin users: " + insertError.message;
+      }
+    }
+
+    return null;
+  } catch (err) {
+    return "Auth setup failed: " + (err instanceof Error ? err.message : String(err));
   }
 }
 

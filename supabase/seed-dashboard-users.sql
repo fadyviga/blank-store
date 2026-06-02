@@ -1,5 +1,5 @@
 -- Admin dashboard users table + auto-bootstrap RPC
--- Run this in Supabase SQL Editor OR it will be auto-applied on first login
+-- Run once in Supabase SQL Editor. After that, the RPC function handles repairs.
 
 CREATE TABLE IF NOT EXISTS admin_users (
   id SERIAL PRIMARY KEY,
@@ -15,8 +15,8 @@ INSERT INTO admin_users (username, password_hash, role) VALUES
   ('data', 'a44415658dcbcd95ddd13e1138a47c88:e6669c4166ead2727edf9f7a60115de4047a2c83d0560720f6034c9828b466908b8b52e938c494c519c6fdb483d601deb98274bf9ae288ec91ef39f913783ae3', 'viewer')
 ON CONFLICT (username) DO NOTHING;
 
--- Auto-bootstrap RPC function — creates table + seeds only when empty
--- Called by the login API on first request (safe to run repeatedly)
+-- Auto-bootstrap RPC — creates table + seeds only when empty
+-- Called by login API on every attempt (safe, idempotent)
 CREATE OR REPLACE FUNCTION ensure_admin_users()
 RETURNS void
 LANGUAGE plpgsql
