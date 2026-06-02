@@ -18,7 +18,8 @@ export interface PendingShortageItem {
 interface SizeOrderRef {
   display_id: string;
   customer_name: string;
-  quantity: number;
+  ordered_quantity: number;
+  missing_quantity: number;
   order_date: string;
   order_id: string;
 }
@@ -49,11 +50,17 @@ interface PendingShortagesResponse {
   grouped: ProductGroup[];
 }
 
-const STATUS: PendingShortageItem["status_indicator"][] = [
-  "out_of_stock",
-  "partial",
-  "full",
-];
+function normalizeSize(s: string): string {
+  return s.replace(/^XXL$/i, "2XL").replace(/^XXXL$/i, "3XL");
+}
+
+function parseItems(raw: unknown): any[] {
+  if (typeof raw === "string") {
+    try { return JSON.parse(raw); } catch { return []; }
+  }
+  if (Array.isArray(raw)) return raw;
+  return [];
+}
 
 export async function GET() {
   try {
@@ -68,94 +75,150 @@ export async function GET() {
     if (ordersErr) {
       const parsed = getResponseError(ordersErr);
       if (parsed.tableNotFound || parsed.htmlResponse) {
-        return NextResponse.json({ items: [], summary: { total_pending_orders_with_shortages: 0, total_missing_units: 0, total_affected_products: 0 }, grouped: [] });
+        return NextResponse.json(emptyResponse());
       }
       return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });
     }
 
     if (!orders || orders.length === 0) {
-      return NextResponse.json({
-        summary: { total_pending_orders_with_shortages: 0, total_missing_units: 0, total_affected_products: 0 },
-        items: [],
-        grouped: [],
-      });
+      return NextResponse.json(emptyResponse());
     }
 
-    const { data: variants, error: variantsErr } = await admin
-      .from("product_variants")
-      .select("stock, products!product_id(name), product_colors!color_id(name), product_sizes!size_id(label)");
+    interface ParsedItem {
+      orderId: string;
+      displayId: string;
+      customerName: string;
+      orderDate: string;
+      productName: string;
+      color: string;
+      size: string;
+      orderedQty: number;
+      variantId: string | null;
+      productId: string | null;
+      colorId: string | null;
+      sizeId: string | null;
+    }
 
-    if (variantsErr) {
-      const parsed = getResponseError(variantsErr);
-      if (parsed.tableNotFound || parsed.htmlResponse) {
-        return NextResponse.json({ items: [], summary: { total_pending_orders_with_shortages: 0, total_missing_units: 0, total_affected_products: 0 }, grouped: [] });
+    const allParsed: ParsedItem[] = [];
+    const variantIds = new Set<string>();
+
+    for (const order of orders) {
+      const items = parseItems(order.items);
+      const displayId = order.display_id || `BLK-${String(order.id).padStart(6, "0")}`;
+      const customerName = order.name || "Unknown";
+      const orderDate = order.created_at || "";
+
+      for (const item of items) {
+        const productName = item.product_name || item.name || "";
+        const color = item.color || "";
+        const size = normalizeSize(item.size || "");
+        const orderedQty = Number(item.quantity) || 1;
+        const vid: string | null = item.variant_id || null;
+
+        if (vid) variantIds.add(vid);
+
+        allParsed.push({
+          orderId: order.id,
+          displayId,
+          customerName,
+          orderDate,
+          productName,
+          color,
+          size,
+          orderedQty,
+          variantId: vid,
+          productId: item.product_id || null,
+          colorId: item.color_id || null,
+          sizeId: item.size_id || null,
+        });
       }
-      return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });
     }
 
-    const variantStockMap: Record<string, number> = {};
-    for (const v of variants || []) {
+    const stockByVariantId = new Map<string, number>();
+    const stockByCompositeKey = new Map<string, number>();
+
+    if (variantIds.size > 0) {
+      const { data: variantRows, error: vErr } = await admin
+        .from("product_variants")
+        .select("id, stock")
+        .in("id", [...variantIds]);
+
+      if (!vErr) {
+        for (const v of variantRows || []) {
+          stockByVariantId.set(v.id, v.stock ?? 0);
+        }
+      }
+    }
+
+    const { data: allVariants, error: allVErr } = await admin
+      .from("product_variants")
+      .select("id, stock, products!product_id(name), product_colors!color_id(name), product_sizes!size_id(label)");
+
+    if (allVErr) {
+      const parsed = getResponseError(allVErr);
+      if (!parsed.tableNotFound && !parsed.htmlResponse) {
+        return NextResponse.json({ error: parsed.cleanedMessage }, { status: 500 });
+      }
+    }
+
+    for (const v of allVariants || []) {
       const pName = (v.products as any)?.name || "";
       const color = (v.product_colors as any)?.name || "";
       const size = (v.product_sizes as any)?.label || "";
       const key = `${pName}||${color}||${size}`;
-      variantStockMap[key] = (variantStockMap[key] || 0) + (v.stock ?? 0);
+      stockByCompositeKey.set(key, (stockByCompositeKey.get(key) || 0) + (v.stock ?? 0));
+
+      const compositeIdKey = `${(v as any).product_id}||${(v as any).color_id}||${(v as any).size_id}`;
+      if (!stockByCompositeKey.has(compositeIdKey)) {
+        stockByCompositeKey.set(compositeIdKey, v.stock ?? 0);
+      }
     }
 
     const items: PendingShortageItem[] = [];
     const affectedOrderSet = new Set<string>();
     const affectedProductSet = new Set<string>();
 
-    for (const order of orders) {
-      let parsedItems: any[] = [];
-      if (typeof order.items === "string") {
-        try { parsedItems = JSON.parse(order.items); } catch { continue; }
-      } else if (Array.isArray(order.items)) {
-        parsedItems = order.items;
+    for (const p of allParsed) {
+      let stock = 0;
+
+      if (p.variantId && stockByVariantId.has(p.variantId)) {
+        stock = stockByVariantId.get(p.variantId)!;
+      } else if (p.productId && p.colorId && p.sizeId) {
+        const compositeIdKey = `${p.productId}||${p.colorId}||${p.sizeId}`;
+        stock = stockByCompositeKey.get(compositeIdKey) ?? 0;
+      } else {
+        const textKey = `${p.productName}||${p.color}||${p.size}`;
+        stock = stockByCompositeKey.get(textKey) ?? 0;
       }
 
-      const displayId = order.display_id || `BLK-${String(order.id).padStart(6, "0")}`;
-      const customerName = order.name || "Unknown";
-      const orderDate = order.created_at || "";
+      const missing = Math.max(0, p.orderedQty - stock);
+      if (missing <= 0) continue;
 
-      for (const item of parsedItems) {
-        const pName = item.product_name || item.name || "";
-        const color = item.color || "";
-        const size = (item.size || "").replace(/^XXL$/i, "2XL").replace(/^XXXL$/i, "3XL");
-        const orderedQty = Number(item.quantity) || 1;
-
-        const key = `${pName}||${color}||${size}`;
-        const currentStock = variantStockMap[key] || 0;
-        const missing = Math.max(0, orderedQty - currentStock);
-
-        if (missing <= 0) continue;
-
-        let indicator: PendingShortageItem["status_indicator"];
-        if (currentStock === 0) {
-          indicator = "out_of_stock";
-        } else if (currentStock < orderedQty) {
-          indicator = "partial";
-        } else {
-          indicator = "full";
-        }
-
-        affectedOrderSet.add(order.id);
-        affectedProductSet.add(pName);
-
-        items.push({
-          order_id: order.id,
-          display_id: displayId,
-          customer_name: customerName,
-          order_date: orderDate,
-          product_name: pName,
-          color,
-          size,
-          ordered_quantity: orderedQty,
-          current_stock: currentStock,
-          missing_quantity: missing,
-          status_indicator: indicator,
-        });
+      let indicator: PendingShortageItem["status_indicator"];
+      if (stock === 0) {
+        indicator = "out_of_stock";
+      } else if (stock < p.orderedQty) {
+        indicator = "partial";
+      } else {
+        indicator = "full";
       }
+
+      affectedOrderSet.add(p.orderId);
+      affectedProductSet.add(p.productName);
+
+      items.push({
+        order_id: p.orderId,
+        display_id: p.displayId,
+        customer_name: p.customerName,
+        order_date: p.orderDate,
+        product_name: p.productName,
+        color: p.color,
+        size: p.size,
+        ordered_quantity: p.orderedQty,
+        current_stock: stock,
+        missing_quantity: missing,
+        status_indicator: indicator,
+      });
     }
 
     const totalMissing = items.reduce((sum, i) => sum + i.missing_quantity, 0);
@@ -183,7 +246,8 @@ export async function GET() {
       sizeMap.get(item.size)!.push({
         display_id: item.display_id,
         customer_name: item.customer_name,
-        quantity: item.ordered_quantity,
+        ordered_quantity: item.ordered_quantity,
+        missing_quantity: item.missing_quantity,
         order_date: item.order_date,
         order_id: item.order_id,
       });
@@ -197,7 +261,7 @@ export async function GET() {
         for (const [size, orderRefs] of sizeMap) {
           sizes.push({
             size,
-            missing_total: orderRefs.reduce((s, r) => s + r.quantity, 0),
+            missing_total: orderRefs.reduce((s, r) => s + r.missing_quantity, 0),
             orders: orderRefs,
           });
         }
@@ -206,10 +270,21 @@ export async function GET() {
       grouped.push({ product_name, colors });
     }
 
-    const response: PendingShortagesResponse = { summary, items, grouped };
-    return NextResponse.json(response);
+    return NextResponse.json({
+      summary,
+      items,
+      grouped,
+    } satisfies PendingShortagesResponse);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+function emptyResponse(): PendingShortagesResponse {
+  return {
+    summary: { total_pending_orders_with_shortages: 0, total_missing_units: 0, total_affected_products: 0 },
+    items: [],
+    grouped: [],
+  };
 }

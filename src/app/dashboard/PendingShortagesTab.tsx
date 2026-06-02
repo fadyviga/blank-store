@@ -6,7 +6,6 @@ import {
   Package,
   ShoppingBag,
   Loader2,
-  ExternalLink,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -14,7 +13,8 @@ import {
 interface SizeOrderRef {
   display_id: string;
   customer_name: string;
-  quantity: number;
+  ordered_quantity: number;
+  missing_quantity: number;
   order_date: string;
   order_id: string;
 }
@@ -59,11 +59,7 @@ interface PendingShortagesData {
   grouped: ProductGroup[];
 }
 
-export default function PendingShortagesTab({
-  onNavigateOrder,
-}: {
-  onNavigateOrder?: () => void;
-}) {
+export default function PendingShortagesTab() {
   const [data, setData] = useState<PendingShortagesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
@@ -212,7 +208,6 @@ export default function PendingShortagesTab({
                       <p className="text-sm font-medium text-zinc-200 mb-2">{color.color}</p>
                       <div className="space-y-3 pl-4">
                         {color.sizes.map((sz) => {
-                          const missingFromOrders = sz.orders.reduce((s, o) => s + Math.max(0, o.quantity - 0), 0);
                           return (
                             <div
                               key={sz.size}
@@ -235,7 +230,7 @@ export default function PendingShortagesTab({
                                       <span className="text-zinc-500">{ref.customer_name}</span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                      <span className="text-yellow-400">Qty {ref.quantity}</span>
+                                      <span className="text-yellow-400">Qty {ref.ordered_quantity}</span>
                                       <span className="text-zinc-600">
                                         {ref.order_date
                                           ? new Date(ref.order_date).toLocaleDateString("en-GB")
