@@ -44,6 +44,7 @@ import PartnersTab from "./PartnersTab";
 import TreasuryTab from "./TreasuryTab";
 import DiscountsTab from "./DiscountsTab";
 import AnalyticsTab from "./AnalyticsTab";
+import ShortagesTab from "./ShortagesTab";
 
 type Tab =
   | "overview"
@@ -58,7 +59,8 @@ type Tab =
   | "reports"
   | "partners"
   | "treasury"
-  | "discounts";
+  | "discounts"
+  | "shortages";
 
 export default function DashboardPage() {
   const handleLogout = () => {
@@ -73,6 +75,7 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [shortageCount, setShortageCount] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -83,6 +86,15 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
       console.error("Failed to load dashboard data:", err);
     }
     setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/shortages")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.summary) setShortageCount(d.summary.total_missing_units);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -118,6 +130,11 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
     { key: "partners", label: "Partners", icon: <HandCoins size={16} /> },
     { key: "discounts", label: "Discounts", icon: <Tag size={16} /> },
     { key: "treasury", label: "Treasury", icon: <Wallet size={16} /> },
+    {
+      key: "shortages",
+      label: `Shortages${shortageCount && shortageCount > 0 ? ` (${shortageCount})` : ""}`,
+      icon: <AlertTriangle size={16} />,
+    },
   ];
 
   const tabContent = (() => {
@@ -148,6 +165,8 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
         return <DiscountsTab />;
       case "treasury":
         return <TreasuryTab />;
+      case "shortages":
+        return <ShortagesTab />;
     }
   })();
 
