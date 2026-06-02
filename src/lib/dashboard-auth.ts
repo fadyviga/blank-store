@@ -67,17 +67,70 @@ export async function validateCredentialsFromDb(
   return { username: user.username, role: user.role as "admin" | "viewer" };
 }
 
+const CREATE_TABLE_SQL = `
+CREATE TABLE IF NOT EXISTS public.admin_users (
+  id SERIAL PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'viewer' CHECK (role IN ('admin', 'viewer')),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+INSERT INTO public.admin_users (username, password_hash, role) VALUES
+  ('admin', '83725399088ae092fb3cc1074c77a893:caede31f212cf18984596be81d62a7241812bd5e026370b01991a3855fa3677fddb99783ff66632659673f3d37e014ef1245d72e21c9b08a24102da132d8a672', 'admin'),
+  ('data', 'a44415658dcbcd95ddd13e1138a47c88:e6669c4166ead2727edf9f7a60115de4047a2c83d0560720f6034c9828b466908b8b52e938c494c519c6fdb483d601deb98274bf9ae288ec91ef39f913783ae3', 'viewer')
+ON CONFLICT (username) DO NOTHING;
+`;
+
+async function tryCreateTableRemotely(): Promise<boolean> {
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  const supabaseUrl = rawUrl.replace(/\/rest\/v1\/?$/, "");
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const mgmtToken = process.env.SUPABASE_MGMT_TOKEN;
+  const databaseUrl = process.env.DATABASE_URL;
+
+  const projectRef = supabaseUrl.match(/https:\/\/(.+)\.supabase\.co/)?.[1];
+
+  // Method A: Direct pg connection via DATABASE_URL
+  if (databaseUrl) {
+    try {
+      const { default: postgres } = await import("postgres");
+      const sql = postgres(databaseUrl);
+      await sql.unsafe(CREATE_TABLE_SQL);
+      await sql.end();
+      return true;
+    } catch {
+      // fall through
+    }
+  }
+
+  // Method B: Supabase Management API
+  if (mgmtToken && projectRef) {
+    try {
+      const res = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/sql`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${mgmtToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ query: CREATE_TABLE_SQL }),
+      });
+      if (res.ok) return true;
+    } catch {
+      // fall through
+    }
+  }
+
+  return false;
+}
+
 export async function ensureAdminUsersTable(): Promise<string | null> {
   try {
     const admin = getAdminClient();
 
     // Try the RPC function first (creates table + seeds only when empty)
     const { error: rpcError } = await admin.rpc("ensure_admin_users");
-    if (!rpcError) {
-      console.log("[auth] RPC ensure_admin_users succeeded");
-      return null;
-    }
-    console.log("[auth] RPC not available, falling back to direct check:", rpcError.message);
+    if (!rpcError) return null;
 
     // RPC doesn't exist — check if table has rows
     const { data: existing, error: tableError } = await admin
@@ -86,12 +139,34 @@ export async function ensureAdminUsersTable(): Promise<string | null> {
       .limit(1);
 
     if (tableError) {
-      return "Dashboard users table not found. Run the migration SQL in Supabase SQL Editor.";
+      // Table doesn't exist — try to create it at runtime
+      const created = await tryCreateTableRemotely();
+      if (created) {
+        // Table now exists and was seeded — retry should work
+        return null;
+      }
+
+      // Build a useful error message with the project URL
+      const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+      const supabaseUrl = rawUrl.replace(/\/rest\/v1\/?$/, "");
+      const projectRef = supabaseUrl.match(/https:\/\/(.+)\.supabase\.co/)?.[1] || supabaseUrl;
+
+      return [
+        `Dashboard users table not found in Supabase project: ${projectRef}.supabase.co`,
+        "",
+        "Fix: Go to https://supabase.com/dashboard/project/" + projectRef + "/sql/new",
+        "Paste this SQL and click RUN:",
+        "",
+        "--- SQL BEGIN ---",
+        CREATE_TABLE_SQL.trim(),
+        "--- SQL END ---",
+        "",
+        "Alternative: add DATABASE_URL (postgres connection string) or SUPABASE_MGMT_TOKEN to Vercel env vars for auto-bootstrap.",
+      ].join("\n");
     }
 
     // Table exists but is empty — seed the two required accounts
     if (existing && existing.length === 0) {
-      console.log("[auth] table empty — seeding admin + viewer users");
       const adminHash = hashPassword("blank@2026");
       const dataHash = hashPassword("123456789");
       const { error: insertError } = await admin.from("admin_users").insert([
