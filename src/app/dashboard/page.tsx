@@ -44,7 +44,7 @@ import PartnersTab from "./PartnersTab";
 import TreasuryTab from "./TreasuryTab";
 import DiscountsTab from "./DiscountsTab";
 import AnalyticsTab from "./AnalyticsTab";
-import ShortagesTab from "./ShortagesTab";
+
 import PendingShortagesTab from "./PendingShortagesTab";
 
 type Tab =
@@ -54,14 +54,12 @@ type Tab =
   | "inventory"
   | "customers"
   | "analytics"
-  | "restock"
   | "purchases"
   | "expenses"
   | "reports"
   | "partners"
   | "treasury"
   | "discounts"
-  | "shortages"
   | "pending-shortages";
 
 export default function DashboardPage() {
@@ -77,7 +75,6 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [shortageCount, setShortageCount] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -88,15 +85,6 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
       console.error("Failed to load dashboard data:", err);
     }
     setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetch("/api/shortages")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.summary) setShortageCount(d.summary.total_missing_units);
-      })
-      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -125,18 +113,12 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
     { key: "inventory", label: "Inventory", icon: <Settings size={16} /> },
     { key: "customers", label: "Customers", icon: <Users size={16} /> },
     { key: "analytics", label: "Analytics", icon: <TrendingUp size={16} /> },
-    { key: "restock", label: "Restock", icon: <AlertTriangle size={16} /> },
     { key: "purchases", label: "Purchases", icon: <DollarSign size={16} /> },
     { key: "expenses", label: "Expenses", icon: <Receipt size={16} /> },
     { key: "reports", label: "Reports", icon: <BarChart3 size={16} /> },
     { key: "partners", label: "Partners", icon: <HandCoins size={16} /> },
     { key: "discounts", label: "Discounts", icon: <Tag size={16} /> },
     { key: "treasury", label: "Treasury", icon: <Wallet size={16} /> },
-    {
-      key: "shortages",
-      label: `Shortages${shortageCount && shortageCount > 0 ? ` (${shortageCount})` : ""}`,
-      icon: <AlertTriangle size={16} />,
-    },
     {
       key: "pending-shortages",
       label: "Pending Shortages",
@@ -158,8 +140,6 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
         return <CustomersTab orders={orders} />;
       case "analytics":
         return <AnalyticsTab />;
-      case "restock":
-        return <RestockTab />;
       case "purchases":
         return <PurchasesTab />;
       case "expenses":
@@ -172,8 +152,6 @@ function AuthenticatedDashboard({ onLogout }: { onLogout: () => void }) {
         return <DiscountsTab />;
       case "treasury":
         return <TreasuryTab />;
-      case "shortages":
-        return <ShortagesTab />;
       case "pending-shortages":
         return <PendingShortagesTab />;
     }
@@ -1523,111 +1501,6 @@ function InventoryTab() {
           </table>
         </div>
       </div>
-    </div>
-  );
-}
-
-function RestockTab() {
-  const [items, setItems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch("/api/restock");
-        const data = await res.json();
-        setItems(Array.isArray(data) ? data : (data.items || []));
-      } catch (err) {
-        console.error("Failed to load restock list:", err);
-      }
-      setLoading(false);
-    };
-    load();
-  }, []);
-
-  if (loading) return <div className="flex justify-center py-10"><Loader2 size={24} className="animate-spin text-zinc-500" /></div>;
-
-  const critical = items.filter((i: any) => i.stock_level === "critical_stock");
-  const low = items.filter((i: any) => i.stock_level === "low_stock");
-
-  return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-3 gap-4">
-        <StatCard icon={<Package size={24} />} label="Need Restock" value={items.length} highlight={items.length > 0} />
-        <StatCard icon={<AlertTriangle size={24} />} label="Critical (≤ -5)" value={critical.length} highlight={critical.length > 0} />
-        <StatCard icon={<AlertTriangle size={24} />} label="Low Stock (< 0)" value={low.length} highlight={low.length > 0} />
-      </div>
-
-      {critical.length > 0 && (
-        <div>
-          <h3 className="font-bold mb-3 text-red-400 flex items-center gap-2">
-            <AlertTriangle size={16} /> Critical — Immediate Restock Needed
-          </h3>
-          <div className="space-y-2">
-            {critical.map((v: any) => (
-              <div key={v.id} className="bg-zinc-950 border border-red-500/30 rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{v.color} / {v.size}</p>
-                    <p className="text-xs text-zinc-500">SKU: {v.sku}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-red-400 font-bold">{v.stock}</p>
-                    <p className="text-xs text-red-400">Need {v.missing} items</p>
-                  </div>
-                </div>
-                <a
-                  href={v.whatsapp_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 mt-3 text-xs text-green-400 hover:text-green-300 transition"
-                >
-                  Send WhatsApp Alert →
-                </a>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {low.length > 0 && (
-        <div>
-          <h3 className="font-bold mb-3 text-yellow-400 flex items-center gap-2">
-            <AlertTriangle size={16} /> Low Stock — Needs Restock
-          </h3>
-          <div className="space-y-2">
-            {low.map((v: any) => (
-              <div key={v.id} className="bg-zinc-950 border border-yellow-500/20 rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{v.color} / {v.size}</p>
-                    <p className="text-xs text-zinc-500">SKU: {v.sku}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-yellow-400 font-bold">{v.stock}</p>
-                    <p className="text-xs text-yellow-400">Need {v.missing} items</p>
-                  </div>
-                </div>
-                <a
-                  href={v.whatsapp_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 mt-3 text-xs text-green-400 hover:text-green-300 transition"
-                >
-                  Send WhatsApp Alert →
-                </a>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {items.length === 0 && (
-        <div className="text-center py-16">
-          <Package size={48} className="mx-auto text-zinc-700 mb-4" />
-          <p className="text-zinc-500">All variants are fully stocked</p>
-        </div>
-      )}
     </div>
   );
 }
