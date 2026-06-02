@@ -33,38 +33,23 @@ export async function validateCredentialsFromDb(
   username: string,
   password: string
 ): Promise<{ username: string; role: "admin" | "viewer" } | null> {
-  let admin;
   try {
-    admin = getAdminClient();
-  } catch (err) {
-    console.error("[auth] getAdminClient threw:", err);
+    const admin = getAdminClient();
+    const { data: user, error } = await admin
+      .from("admin_users")
+      .select("username, password_hash, role")
+      .eq("username", username)
+      .maybeSingle();
+
+    if (error || !user) return null;
+
+    const valid = verifyPassword(password, user.password_hash);
+    if (!valid) return null;
+
+    return { username: user.username, role: user.role as "admin" | "viewer" };
+  } catch {
     return null;
   }
-
-  const { data: user, error } = await admin
-    .from("admin_users")
-    .select("username, password_hash, role")
-    .eq("username", username)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[auth] DB query error:", error.message);
-    return null;
-  }
-
-  if (!user) {
-    console.log("[auth] user not found for:", username);
-    return null;
-  }
-
-  console.log("[auth] user found:", user.username, "role:", user.role, "hash_prefix:", user.password_hash.split(":")[0]);
-
-  const valid = verifyPassword(password, user.password_hash);
-  console.log("[auth] password match:", valid);
-
-  if (!valid) return null;
-
-  return { username: user.username, role: user.role as "admin" | "viewer" };
 }
 
 const CREATE_TABLE_SQL = `

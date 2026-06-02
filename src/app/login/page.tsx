@@ -9,6 +9,10 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const redirectTo = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("redirect") || "/dashboard"
+    : "/dashboard";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -30,7 +34,7 @@ export default function AdminLoginPage() {
       const data = await res.json();
 
       if (res.ok) {
-        window.location.href = "/dashboard";
+        window.location.href = redirectTo;
       } else {
         setError(data.error || "Invalid credentials");
       }

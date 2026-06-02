@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { validateCredentials, createSessionToken, ensureAdminUsersTable, getAdminClient } from "@/lib/dashboard-auth";
+import { validateCredentials, createSessionToken, ensureAdminUsersTable } from "@/lib/dashboard-auth";
 
 export async function POST(request: Request) {
   try {
@@ -15,28 +15,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Username and password required" }, { status: 400 });
     }
 
-    // Step 1: Check admin client
-    try {
-      getAdminClient();
-    } catch (e) {
-      return NextResponse.json({ error: "Auth setup error (admin client)", detail: (e as Error).message }, { status: 500 });
-    }
-
-    // Step 2: Ensure table setup
     const setupError = await ensureAdminUsersTable();
     if (setupError) {
       return NextResponse.json({ error: setupError }, { status: 500 });
     }
 
-    // Step 3: Validate credentials
     const user = await validateCredentials(username.trim(), password);
     if (!user) {
-      const users = await getAdminClient().from("admin_users").select("username, role");
-      return NextResponse.json({
-        error: "Invalid credentials",
-        _debug: "validateCredentials returned null",
-        dbUsers: users.error ? `query error: ${users.error.message}` : users.data?.length ?? 0,
-      }, { status: 401 });
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
     const token = createSessionToken(user.username, user.role);
