@@ -19,7 +19,8 @@ export interface PendingShortageItem {
     color_id: string | null;
     size_id: string | null;
     stock_from_db: number;
-    lookup_method: "variant_id" | "composite_id" | "text_key";
+    lookup_method: "variant_id" | "composite_id" | "text_key" | "fuzzy_text";
+    matched_variant_product_name?: string;
   };
 }
 
@@ -60,6 +61,61 @@ interface PendingShortagesResponse {
 
 function normalizeSize(s: string): string {
   return s.replace(/^XXL$/i, "2XL").replace(/^XXXL$/i, "3XL");
+}
+
+function normalizeText(s: string): string {
+  return s.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+interface VariantRecord {
+  id: string;
+  stock: number;
+  productName: string;
+  color: string;
+  size: string;
+}
+
+function fuzzyMatchStock(
+  itemName: string,
+  itemColor: string,
+  itemSize: string,
+  variants: VariantRecord[]
+): { stock: number; matchedName: string; variantId: string } | null {
+  const normItemName = normalizeText(itemName);
+  const normItemColor = normalizeText(itemColor);
+  const normItemSize = normalizeSize(normalizeText(itemSize));
+
+  let best: { stock: number; matchedName: string; variantId: string; score: number } | null = null;
+
+  for (const v of variants) {
+    const normVarName = normalizeText(v.productName);
+    const normVarColor = normalizeText(v.color);
+    const normVarSize = normalizeSize(normalizeText(v.size));
+
+    if (normVarColor !== normItemColor) continue;
+    if (normVarSize !== normItemSize) continue;
+
+    let score = 0;
+
+    if (normVarName === normItemName) {
+      score = 100;
+    } else if (normVarName.includes(normItemName) || normItemName.includes(normVarName)) {
+      score = 80;
+    } else {
+      const itemWords = normItemName.split(/\s+/).filter(Boolean);
+      const varWords = normVarName.split(/\s+/).filter(Boolean);
+      const allMatch = itemWords.every((w) => varWords.includes(w));
+      if (allMatch && itemWords.length > 0) {
+        score = 60;
+      }
+    }
+
+    if (score > 0 && (!best || score > best.score)) {
+      best = { stock: v.stock, matchedName: v.productName, variantId: v.id, score };
+    }
+  }
+
+  return best;
 }
 
 function parseItems(raw: unknown): any[] {
@@ -173,6 +229,7 @@ export async function GET() {
     const stockByVariantId = new Map<string, number>();
     const stockByCompositeId = new Map<string, number>();
     const stockByText = new Map<string, number>();
+    const variantRecords: VariantRecord[] = [];
 
     for (const v of (allVariants || []) as unknown as Array<Record<string, unknown>>) {
       const sid = String(v.id);
@@ -196,6 +253,14 @@ export async function GET() {
         const textKey = `${pName}||${color}||${size}`;
         const existing = stockByText.get(textKey) || 0;
         stockByText.set(textKey, existing + s);
+
+        variantRecords.push({
+          id: sid,
+          stock: s,
+          productName: pName,
+          color,
+          size,
+        });
       }
     }
 
@@ -205,8 +270,9 @@ export async function GET() {
         byVariantId: stockByVariantId.size,
         byCompositeId: stockByCompositeId.size,
         byText: stockByText.size,
+        fuzzyRecords: variantRecords.length,
         totalVariants: (allVariants || []).length,
-        variantIdSample: [...stockByVariantId.entries()].slice(0, 3),
+        variantSample: [...stockByVariantId.entries()].slice(0, 3),
       })
     );
 
@@ -217,7 +283,8 @@ export async function GET() {
 
     for (const p of allParsed) {
       let stock = 0;
-      let lookupMethod: "variant_id" | "composite_id" | "text_key";
+      let lookupMethod: "variant_id" | "composite_id" | "text_key" | "fuzzy_text";
+      let matchedVariantProductName: string | undefined;
 
       if (p.variantId) {
         const queried = stockByVariantId.get(p.variantId);
@@ -225,12 +292,10 @@ export async function GET() {
           stock = queried;
           lookupMethod = "variant_id";
         } else {
-          // variant_id was set on the item but doesn't exist in the DB
-          // (possibly deleted). Fall through.
           console.warn(
             "[api/shortages/pending] variant_id not found in DB:",
             p.variantId,
-            "falling back for item",
+            "for item",
             p.productName,
             p.color,
             p.size
@@ -247,6 +312,39 @@ export async function GET() {
         stock = stockByText.get(textKey) ?? 0;
         lookupMethod = "text_key";
       }
+
+      // If exact text key failed and we have a variantRecords array, try fuzzy
+      if (stock === 0 && lookupMethod === "text_key" && variantRecords.length > 0) {
+        const fuzzy = fuzzyMatchStock(p.productName, p.color, p.size, variantRecords);
+        if (fuzzy) {
+          stock = fuzzy.stock;
+          lookupMethod = "fuzzy_text";
+          matchedVariantProductName = fuzzy.matchedName;
+          console.log(
+            "[api/shortages/pending] FUZZY MATCH:",
+            `"${p.productName}" "${p.color}" "${p.size}"`,
+            `→ variant "${fuzzy.matchedName}" (id=${fuzzy.variantId})`,
+            `stock=${fuzzy.stock}`
+          );
+        }
+      }
+
+      console.log(
+        "[SHORTAGE CHECK]",
+        JSON.stringify({
+          product: p.productName,
+          color: p.color,
+          size: p.size,
+          variantId: p.variantId,
+          productId: p.productId,
+          colorId: p.colorId,
+          sizeId: p.sizeId,
+          stock,
+          ordered: p.orderedQty,
+          lookupMethod,
+          matchedVariantProductName,
+        })
+      );
 
       const missing = Math.max(0, p.orderedQty - stock);
       if (missing <= 0) continue;
@@ -282,10 +380,11 @@ export async function GET() {
           size_id: p.sizeId,
           stock_from_db: stock,
           lookup_method: lookupMethod,
+          ...(matchedVariantProductName ? { matched_variant_product_name: matchedVariantProductName } : {}),
         },
       };
 
-      // Log every item that shows stock 0 for debugging
+      // Log every item with stock=0
       if (stock === 0) {
         console.log(
           "[api/shortages/pending] STOCK_ZERO:",

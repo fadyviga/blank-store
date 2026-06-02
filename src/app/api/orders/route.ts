@@ -326,28 +326,32 @@ export async function POST(request: NextRequest) {
   .replace(/^XXL$/i, "2XL")
   .replace(/^XXXL$/i, "3XL");
         try {
-          // Find product: try exact match first, then substring
-          let product: { id: string } | null = null;
+          // Find product: word-bag matching (same as updateStockForOrder)
+          let product: { id: string; name: string } | null = null;
 
-          const { data: exactProduct } = await admin
+          const { data: allProducts } = await admin
             .from("products")
-            .select("id")
-            .ilike("name", item.name || "")
-            .maybeSingle();
-          product = exactProduct;
+            .select("id, name");
 
+          if (allProducts) {
+            const searchWords = (item.name || "")
+              .toLowerCase()
+              .split(" ")
+              .filter(Boolean);
 
-          if (!product) {
-            const { data: fuzzyProduct } = await admin
-              .from("products")
-              .select("id")
-              .ilike("name", `%${item.name}%`)
-              .maybeSingle();
-            product = fuzzyProduct;
+            const matched = allProducts.find((p: any) => {
+              const dbName = (p.name || "").toLowerCase();
+              return searchWords.every((word: string) => dbName.includes(word));
+            });
+
+            if (matched) {
+              product = matched;
+            }
           }
 
           if (product) {
             enriched.product_id = product.id;
+            console.log(`[api/orders:${logId}] Enriched item "${item.name}" → product ${product.id} (${product.name})`);
 
             const { data: color } = await admin
               .from("product_colors")
