@@ -244,7 +244,7 @@ export default function Home() {
               <p className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] mb-3">Connect</p>
               <div className="flex flex-col gap-2">
                 <a
-                  href="https://www.instagram.com/blankegypt"
+                  href="https://www.instagram.com/blank.EG1"
                   target="_blank"
                   className="text-xs text-zinc-400 hover:text-white transition-all duration-300"
                 >
