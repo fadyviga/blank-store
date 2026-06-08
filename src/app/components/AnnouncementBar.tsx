@@ -10,7 +10,7 @@ export default function AnnouncementBar() {
               key={i}
               className="inline-flex items-center gap-0 text-[11px] md:text-xs tracking-[0.2em] text-black/70 uppercase font-medium mx-6"
             >
-              <span>Eid Offer &mdash; 10% OFF</span>
+              <span>Limited Offer &mdash; 10% OFF</span>
               <span className="w-1 h-1 rounded-full bg-black/20 mx-6" />
               <span>2 Tees &mdash; 900 EGP</span>
               <span className="w-1 h-1 rounded-full bg-black/20 mx-6" />

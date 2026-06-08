@@ -26,8 +26,8 @@ export default function Header() {
   }, [dropdownOpen]);
 
   return (
-    <nav className="sticky top-0 w-full z-50 backdrop-blur-xl bg-black/60 border-b border-white/[0.06]">
-      <div className="max-w-7xl mx-auto px-6 py-2 md:py-2.5 flex items-center justify-between">
+    <nav className="sticky top-0 w-full z-50 bg-black">
+      <div className="max-w-7xl mx-auto px-6 py-3 md:py-3.5 flex items-center justify-between">
         <button onClick={() => router.push("/")} className="flex items-center cursor-pointer shrink-0">
           <img
             src="/logo.png"
@@ -40,7 +40,7 @@ export default function Header() {
           <a
             href="https://wa.me/201287659463"
             target="_blank"
-            className="text-[11px] md:text-xs text-zinc-500 hover:text-white tracking-wider uppercase transition-all duration-300 hidden sm:block"
+            className="text-xs md:text-sm text-zinc-500 hover:text-white tracking-wider uppercase transition-all duration-300 hidden sm:block"
           >
             WhatsApp
           </a>
@@ -58,7 +58,7 @@ export default function Header() {
               </button>
 
               {dropdownOpen && (
-                <div className="absolute top-full right-0 mt-2 w-52 bg-zinc-900/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-2xl py-2 animate-dropdown-in origin-top-right overflow-hidden">
+                <div className="absolute top-full right-0 mt-3 w-52 bg-zinc-900/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-2xl py-2 animate-dropdown-in origin-top-right overflow-hidden">
                   <div className="absolute top-0 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
                   <button
                     onClick={() => { setDropdownOpen(false); router.push("/account"); }}
@@ -88,7 +88,7 @@ export default function Header() {
           ) : (
             <button
               onClick={() => router.push("/login")}
-              className="text-[11px] md:text-xs text-zinc-500 hover:text-white tracking-wider uppercase transition-all duration-300"
+              className="text-xs md:text-sm text-zinc-500 hover:text-white tracking-wider uppercase transition-all duration-300"
             >
               Sign In
             </button>
@@ -96,9 +96,9 @@ export default function Header() {
 
           <button
             onClick={() => router.push("/cart")}
-            className="relative flex items-center gap-2 bg-white text-black px-3.5 md:px-4 py-1.5 md:py-2 rounded-full text-[11px] md:text-xs font-semibold hover:scale-[1.03] active:scale-[0.97] transition-all duration-300 cursor-pointer"
+            className="relative flex items-center gap-2 bg-white text-black px-4 md:px-5 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-semibold hover:scale-[1.03] active:scale-[0.97] transition-all duration-300 cursor-pointer"
           >
-            <ShoppingCart size={15} />
+            <ShoppingCart size={16} />
             <span className="hidden sm:inline">Cart</span>
             {cartCount > 0 && (
               <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-lg">
