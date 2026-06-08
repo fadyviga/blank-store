@@ -27,7 +27,7 @@ export default function Header() {
 
   return (
     <nav className="sticky top-0 w-full z-50 bg-black">
-      <div className="max-w-7xl mx-auto px-6 py-3 md:py-3.5 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-6 py-1.5 md:py-2 flex items-center justify-between">
         <button onClick={() => router.push("/")} className="flex items-center cursor-pointer shrink-0">
           <img
             src="/logo.png"
