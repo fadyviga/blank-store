@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCart } from "../hooks/useCart";
 import { useToast } from "./Toast";
 
-const PRICE = 395;
+const PRICE = 495;
 
 export default function ProductCard({
   color,
@@ -94,7 +94,7 @@ function SizeSelector({
       </div>
 
       <div className="text-center mb-5">
-        <p className="text-zinc-500 line-through text-sm">450 EGP</p>
+        <p className="text-zinc-500 line-through text-sm">550 EGP</p>
         <p className="text-2xl font-bold">{price} EGP</p>
       </div>
 
