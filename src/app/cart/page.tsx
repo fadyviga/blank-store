@@ -140,7 +140,7 @@ export default function CartPage() {
               {cart.map((item, index) => (
                 <div
                   key={index}
-                  className="border border-white/[0.07] rounded-3xl p-5 md:p-6 flex flex-col md:flex-row gap-5 md:items-center justify-between transition-all duration-300 hover:border-white/20 hover:bg-white/[0.01]"
+                  className={`border border-white/[0.07] rounded-3xl p-5 md:p-6 flex flex-col md:flex-row gap-5 md:items-center justify-between transition-all duration-300 hover:border-white/20 hover:bg-white/[0.01] opacity-0 animate-slide-in-right stagger-${index + 1}`}
                 >
                   <div className="flex gap-4 md:gap-5">
                     <img
@@ -168,7 +168,7 @@ export default function CartPage() {
                       className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${
                         item.quantity <= 1
                           ? "bg-zinc-800/50 text-zinc-600 cursor-not-allowed"
-                          : "bg-zinc-800 hover:bg-zinc-700 cursor-pointer text-zinc-300 hover:text-white"
+                          : "bg-zinc-800 hover:bg-zinc-700 hover:animate-qty-glow cursor-pointer text-zinc-300 hover:text-white"
                       }`}
                     >
                       <Minus size={15} />
@@ -184,7 +184,7 @@ export default function CartPage() {
 
                     <button
                       onClick={() => increaseQty(index)}
-                      className="w-10 h-10 rounded-full bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-all duration-200 cursor-pointer text-zinc-300 hover:text-white"
+                      className="w-10 h-10 rounded-full bg-zinc-800 hover:bg-zinc-700 hover:animate-qty-glow flex items-center justify-center transition-all duration-200 cursor-pointer text-zinc-300 hover:text-white"
                     >
                       <Plus size={15} />
                     </button>

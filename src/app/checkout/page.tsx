@@ -194,7 +194,7 @@ export default function CheckoutPage() {
     `w-full bg-black border rounded-xl px-5 py-4 outline-none transition-all duration-200 ${
       touched[field] && errors[field as keyof Errors]
         ? "border-red-500"
-        : "border-white/[0.08] focus:border-white/30"
+        : "border-white/[0.08] focus:border-white/30 focus:animate-focus-ring"
     }`;
 
   const itemCount = Array.isArray(cart)
@@ -324,7 +324,7 @@ export default function CheckoutPage() {
                     className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer ${
                       isSubmitting
                         ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
-                        : "bg-white text-black hover:scale-[1.02] hover:shadow-[0_0_32px_-6px_rgba(255,255,255,0.2)]"
+                        : "bg-white text-black hover:scale-[1.02] active:scale-[0.97] hover:shadow-[0_0_32px_-6px_rgba(255,255,255,0.2)]"
                     }`}
                   >
                     {isSubmitting ? (

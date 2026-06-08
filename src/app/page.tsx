@@ -93,6 +93,9 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ─── DIVIDER ─── */}
+      <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent animate-accent-pulse" />
+
       {/* ─── BUNDLE OFFERS ─── */}
       <section className="relative py-28 md:py-32 px-6 bg-black overflow-hidden opacity-0 animate-section-reveal reveal-1">
         <div className="relative max-w-6xl mx-auto">
@@ -207,12 +210,17 @@ export default function Home() {
             </button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
-            {COLORS.map((color) => (
-              <ColorCard key={color} color={color} />
+            {COLORS.map((color, i) => (
+              <div key={color} className={`opacity-0 animate-card-stagger stagger-${i + 1}`}>
+                <ColorCard color={color} />
+              </div>
             ))}
           </div>
         </div>
       </section>
+
+      {/* ─── DIVIDER ─── */}
+      <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent animate-accent-pulse" />
 
       {/* ─── ABOUT ─── */}
       <section className="relative py-28 md:py-32 px-6 bg-black overflow-hidden opacity-0 animate-section-reveal reveal-4">
@@ -230,8 +238,11 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ─── DIVIDER ─── */}
+      <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent animate-accent-pulse" />
+
       {/* ─── FOOTER ─── */}
-      <footer className="border-t border-white/[0.04] bg-black">
+      <footer className="bg-black">
         <div className="max-w-6xl mx-auto px-6 py-14 md:py-16">
           <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-8 md:gap-12 text-center md:text-left">
             <div>

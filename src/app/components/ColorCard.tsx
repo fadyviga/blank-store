@@ -17,6 +17,22 @@ export default function ColorCard({ color }: { color: string }) {
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [backImageExists, setBackImageExists] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const spotlightRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!spotlightRef.current || !cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    spotlightRef.current.style.background = `radial-gradient(280px circle at ${x}% ${y}%, rgba(255,255,255,0.04) 0%, transparent 70%)`;
+  };
+
+  const handleMouseLeave = () => {
+    if (spotlightRef.current) {
+      spotlightRef.current.style.background = "";
+    }
+  };
 
   const { addToCart } = useCart();
   const { showToast } = useToast();
@@ -75,17 +91,23 @@ export default function ColorCard({ color }: { color: string }) {
   return (
     <>
       <div
-        className="group border border-white/[0.07] rounded-3xl p-5 md:p-6 transition-all duration-700 bg-zinc-950 hover:border-white/25 hover:bg-white/[0.02] hover:shadow-[0_24px_48px_-12px_rgba(255,255,255,0.08)] hover:-translate-y-1.5"
+        ref={cardRef}
+        className="group border border-white/[0.07] rounded-3xl p-5 md:p-6 transition-all duration-700 bg-zinc-950 hover:border-white/25 hover:bg-white/[0.02] hover:shadow-[0_32px_64px_-16px_rgba(255,255,255,0.08)] hover:-translate-y-2"
         onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => { setHovered(false); handleMouseLeave(); }}
       >
         <div className="overflow-hidden rounded-2xl mb-4 relative">
+          <div
+            ref={spotlightRef}
+            className="absolute inset-0 z-10 pointer-events-none rounded-2xl"
+          />
           <img
             ref={imgRef}
             src={backImageExists && hovered ? backImage : frontImage}
             alt={color}
             onError={() => { if (imgRef.current) imgRef.current.src = "/placeholder.svg"; }}
-            className="w-full aspect-square object-cover transition-all duration-700 ease-out group-hover:scale-[1.08]"
+            className="w-full aspect-square object-cover transition-all duration-700 ease-out group-hover:scale-[1.12]"
           />
           <button
             onClick={(e) => { e.stopPropagation(); setQuickViewOpen(true); }}

@@ -364,6 +364,94 @@ main {
   animation: fade-up 0.4s ease-out;
 }
 
+/* ─── DRAMATIC ENTRANCE ─── */
+@keyframes hero-entrance {
+  from { opacity: 0; transform: translateY(40px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-hero-entrance {
+  animation: hero-entrance 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ─── FLOAT WITH WOBBLE ─── */
+@keyframes float-wobble {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-8px) rotate(-0.5deg); }
+  75% { transform: translateY(-4px) rotate(0.5deg); }
+}
+
+.animate-float-wobble {
+  animation: float-wobble 7s ease-in-out infinite;
+}
+
+.animate-float-wobble-2 {
+  animation: float-wobble 7s ease-in-out 3.5s infinite;
+}
+
+/* ─── SLIDE IN RIGHT ─── */
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-in-right-1 { animation-delay: 0s; }
+.animate-slide-in-right-2 { animation-delay: 0.06s; }
+.animate-slide-in-right-3 { animation-delay: 0.12s; }
+.animate-slide-in-right-4 { animation-delay: 0.18s; }
+.animate-slide-in-right-5 { animation-delay: 0.24s; }
+
+/* ─── CARD GRID ENTRANCE ─── */
+@keyframes card-stagger-in {
+  from { opacity: 0; transform: translateY(24px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-card-stagger {
+  animation: card-stagger-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.stagger-1 { animation-delay: 0s; }
+.stagger-2 { animation-delay: 0.05s; }
+.stagger-3 { animation-delay: 0.1s; }
+.stagger-4 { animation-delay: 0.15s; }
+.stagger-5 { animation-delay: 0.2s; }
+.stagger-6 { animation-delay: 0.25s; }
+.stagger-7 { animation-delay: 0.3s; }
+.stagger-8 { animation-delay: 0.35s; }
+.stagger-9 { animation-delay: 0.4s; }
+.stagger-10 { animation-delay: 0.45s; }
+
+/* ─── QUANTITY GLOW ─── */
+@keyframes qty-glow {
+  0%, 100% { box-shadow: 0 0 0px rgba(255,255,255,0); }
+  50% { box-shadow: 0 0 16px -4px rgba(255,255,255,0.08); }
+}
+
+.animate-qty-glow {
+  animation: qty-glow 2s ease-in-out infinite;
+}
+
+/* ─── FOCUS RING ─── */
+@keyframes focus-ring {
+  from { box-shadow: 0 0 0 0 rgba(255,255,255,0.1); }
+  to { box-shadow: 0 0 0 4px rgba(255,255,255,0.06); }
+}
+
+/* ─── PULSING ACCENT ─── */
+@keyframes accent-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+.animate-accent-pulse {
+  animation: accent-pulse 3s ease-in-out infinite;
+}
+
 /* ─── MARQUEE ─── */
 @keyframes marquee {
   from { transform: translateX(0); }
