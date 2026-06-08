@@ -73,6 +73,7 @@ export default function RootLayout({
             </ToastProvider>
           </CartProvider>
         </AuthProvider>
+        <div className="grain-overlay" />
       </body>
     </html>
   );

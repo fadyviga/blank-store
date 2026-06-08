@@ -53,12 +53,17 @@ export default function Home() {
     <main className="min-h-screen text-white">
       <HeroSection />
 
-      <section className="relative py-28 md:py-32 px-6 bg-black overflow-hidden">
+      {/* Accent divider */}
+      <div className="accent-line mx-auto max-w-[80%] opacity-50" />
+
+      {/* Bundle Offers Section */}
+      <section className="relative py-28 md:py-32 px-6 bg-black overflow-hidden opacity-0 animate-section-reveal reveal-1">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-white/[0.008] blur-[200px]" />
+          <div className="absolute top-1/3 left-1/4 w-[600px] h-[600px] rounded-full bg-white/[0.006] blur-[200px]" />
+          <div className="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] rounded-full bg-white/[0.004] blur-[150px]" />
         </div>
         <div className="relative max-w-6xl mx-auto">
-          <div className="text-center mb-14 md:mb-16">
+          <div className="text-center mb-14 md:mb-16 opacity-0 animate-section-reveal reveal-2">
             <p className="text-zinc-500 uppercase tracking-[0.3em] text-xs mb-4">
               Premium Bundle
             </p>
@@ -151,9 +156,16 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="products" className="pb-28 md:pb-32 px-6 bg-black">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12 md:mb-14">
+      {/* Accent divider */}
+      <div className="accent-line mx-auto max-w-[80%] opacity-50" />
+
+      {/* Products Section */}
+      <section id="products" className="relative pb-28 md:pb-32 pt-8 px-6 bg-black overflow-hidden opacity-0 animate-section-reveal reveal-3">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/2 right-0 w-[500px] h-[500px] rounded-full bg-white/[0.005] blur-[180px]" />
+        </div>
+        <div className="relative max-w-6xl mx-auto">
+          <div className="text-center mb-12 md:mb-14 opacity-0 animate-section-reveal reveal-4">
             <p className="text-zinc-500 uppercase tracking-[0.3em] text-xs mb-3">
               Collection
             </p>
@@ -161,7 +173,7 @@ export default function Home() {
               9 Color Variants
             </h2>
           </div>
-          <div className="flex justify-center mb-10">
+          <div className="flex justify-center mb-10 opacity-0 animate-section-reveal reveal-5">
             <button
               onClick={() => setSizeGuideOpen(true)}
               className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-zinc-500 hover:text-white transition-all duration-300 border border-white/[0.08] hover:border-white/30 rounded-full px-5 py-2.5 cursor-pointer"
@@ -178,8 +190,15 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-28 md:py-32 px-6 border-t border-white/[0.06] bg-black">
-        <div className="max-w-4xl mx-auto text-center">
+      {/* Accent divider */}
+      <div className="accent-line mx-auto max-w-[80%] opacity-50" />
+
+      {/* About Section */}
+      <section className="relative py-28 md:py-32 px-6 bg-black overflow-hidden opacity-0 animate-section-reveal reveal-4">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full bg-white/[0.005] blur-[200px]" />
+        </div>
+        <div className="relative max-w-4xl mx-auto text-center">
           <p className="text-zinc-500 uppercase tracking-[0.3em] text-xs mb-4">
             About Blank
           </p>
@@ -193,7 +212,10 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="border-t border-white/[0.06] py-12 md:py-14 text-center bg-black">
+      {/* Footer accent divider */}
+      <div className="accent-line mx-auto max-w-[80%] opacity-30" />
+
+      <footer className="py-12 md:py-14 text-center bg-black">
         <p className="text-zinc-600 text-xs tracking-widest uppercase">
           &copy; 2026 BLANK &mdash; All Rights Reserved
         </p>

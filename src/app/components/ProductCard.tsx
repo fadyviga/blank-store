@@ -48,15 +48,16 @@ export default function ProductCard({
   const sizes = ["M", "L", "XL", "XXL"] as const;
 
   return (
-    <div className="group border border-white/[0.07] rounded-3xl p-5 md:p-6 transition-all duration-500 bg-zinc-950 hover:border-white/20 hover:bg-white/[0.015] hover:shadow-[0_12px_40px_-8px_rgba(255,255,255,0.05)] hover:-translate-y-0.5">
-      <div className="overflow-hidden rounded-2xl mb-4">
+    <div className="group border border-white/[0.07] rounded-3xl p-5 md:p-6 transition-all duration-700 bg-zinc-950 hover:border-white/25 hover:bg-white/[0.02] hover:shadow-[0_24px_48px_-12px_rgba(255,255,255,0.08)] hover:-translate-y-1.5">
+      <div className="overflow-hidden rounded-2xl mb-4 relative">
+        <div className="absolute inset-0 bg-white/0 group-hover:bg-white/[0.015] transition-all duration-700 z-10 pointer-events-none" />
         <img
           src={image}
           alt={color}
           onError={(e) => {
             (e.target as HTMLImageElement).src = "/placeholder.svg";
           }}
-          className="w-full aspect-square object-cover transition-all duration-700 ease-out group-hover:scale-[1.04]"
+          className="w-full aspect-square object-cover transition-all duration-800 ease-out group-hover:scale-[1.08]"
         />
       </div>
 
@@ -83,7 +84,7 @@ function SizeSelector({
           <button
             key={s}
             onClick={() => onAddToCart(s)}
-            className="px-3 md:px-4 py-2 border border-white/20 hover:border-white/50 rounded-full text-xs md:text-sm transition whitespace-nowrap"
+            className="px-3 md:px-4 py-2 border border-white/20 hover:border-white/50 rounded-full text-xs md:text-sm transition-all duration-300 whitespace-nowrap cursor-pointer"
           >
             {s}
           </button>
@@ -92,7 +93,7 @@ function SizeSelector({
 
       <div className="text-center mb-5">
         <p className="text-zinc-500 line-through text-sm">{COMPARE_PRICE} EGP</p>
-        <p className="text-2xl font-bold">{BASE_PRICE} EGP</p>
+        <p className="text-2xl font-bold animate-price-glow">{BASE_PRICE} EGP</p>
       </div>
 
       <button
@@ -102,7 +103,7 @@ function SizeSelector({
           ) as HTMLElement | null;
           onAddToCart("M");
         }}
-        className="w-full py-3 rounded-full font-semibold bg-white text-black hover:scale-[1.02] transition flex items-center justify-center gap-2"
+        className="w-full py-3 rounded-full font-semibold bg-white text-black hover:scale-[1.03] hover:shadow-[0_0_32px_-6px_rgba(255,255,255,0.2)] active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer"
       >
         <ShoppingCart size={18} />
         Add to Cart
@@ -110,7 +111,7 @@ function SizeSelector({
 
       <button
         onClick={() => onBuyNow("M")}
-        className="w-full border border-white/20 py-3 rounded-full font-semibold hover:bg-white hover:text-black transition"
+        className="w-full border border-white/20 py-3 rounded-full font-semibold hover:bg-white hover:text-black hover:border-white transition-all duration-300 cursor-pointer active:scale-[0.98]"
       >
         Buy Now
       </button>

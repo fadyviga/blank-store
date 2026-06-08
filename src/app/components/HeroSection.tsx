@@ -16,15 +16,40 @@ export default function HeroSection() {
 
   return (
     <section className="relative w-full overflow-hidden bg-[#000] min-h-[90vh] flex items-center">
+      {/* Ambient glow behind logo */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-[600px] h-[600px] sm:w-[800px] sm:h-[800px] rounded-full bg-white/[0.012] blur-[180px] animate-spotlight" />
+        <div className="w-[700px] h-[700px] sm:w-[900px] sm:h-[900px] rounded-full bg-white/[0.015] blur-[200px] animate-ambient-glow" />
+      </div>
+
+      {/* Spotlight sweep */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-0 w-[200%] h-full bg-gradient-to-r from-transparent via-white/[0.015] to-transparent animate-spotlight-sweep" />
+      </div>
+
+      {/* Thin accent line top */}
+      <div className="absolute top-16 md:top-20 left-[10%] right-[10%] pointer-events-none">
+        <div className={`accent-line transition-all duration-1500 delay-300 ${mounted ? "opacity-100" : "opacity-0"}`} />
+      </div>
+
+      {/* Thin accent line bottom */}
+      <div className="absolute bottom-16 md:bottom-20 left-[10%] right-[10%] pointer-events-none">
+        <div className={`accent-line transition-all duration-1500 delay-700 ${mounted ? "opacity-100" : "opacity-0"}`} />
+      </div>
+
+      {/* Vertical accent lines */}
+      <div className="absolute inset-y-[15%] left-6 md:left-10 w-px pointer-events-none">
+        <div className={`h-full w-px bg-gradient-to-b from-transparent via-white/[0.06] to-transparent transition-all duration-1500 delay-400 ${mounted ? "opacity-100" : "opacity-0"}`} />
+      </div>
+      <div className="absolute inset-y-[15%] right-6 md:right-10 w-px pointer-events-none">
+        <div className={`h-full w-px bg-gradient-to-b from-transparent via-white/[0.06] to-transparent transition-all duration-1500 delay-600 ${mounted ? "opacity-100" : "opacity-0"}`} />
       </div>
 
       <div className="relative z-10 w-full">
         <div className="flex flex-col items-center text-center px-6 pt-24 pb-20 md:pb-28">
 
+          {/* Logo with floating animation */}
           <div
-            className={`mb-10 md:mb-12 transition-all duration-1000 ease-out delay-200 ${
+            className={`mb-10 md:mb-12 transition-all duration-1000 ease-out delay-200 animate-logo-float ${
               mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
             }`}
           >
@@ -38,8 +63,9 @@ export default function HeroSection() {
             />
           </div>
 
+          {/* Badge with parallax drift */}
           <div
-            className={`mb-10 transition-all duration-800 ease-out delay-300 ${
+            className={`mb-10 transition-all duration-800 ease-out delay-300 animate-parallax-drift ${
               mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
             }`}
           >

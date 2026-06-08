@@ -49,14 +49,15 @@ export default function ColorCard({ color }: { color: string }) {
   };
 
   return (
-    <div className="group border border-white/[0.07] rounded-3xl p-5 md:p-6 transition-all duration-500 bg-zinc-950 hover:border-white/20 hover:bg-white/[0.015] hover:shadow-[0_12px_40px_-8px_rgba(255,255,255,0.05)] hover:-translate-y-0.5">
-      <div className="overflow-hidden rounded-2xl mb-4">
+    <div className="group border border-white/[0.07] rounded-3xl p-5 md:p-6 transition-all duration-700 bg-zinc-950 hover:border-white/25 hover:bg-white/[0.02] hover:shadow-[0_24px_48px_-12px_rgba(255,255,255,0.08)] hover:-translate-y-1.5">
+      <div className="overflow-hidden rounded-2xl mb-4 relative">
+        <div className="absolute inset-0 bg-white/0 group-hover:bg-white/[0.015] transition-all duration-700 z-10 pointer-events-none" />
         <img
           ref={imgRef}
           src={image}
           alt={color}
           onError={() => { if (imgRef.current) imgRef.current.src = "/placeholder.svg"; }}
-          className="w-full aspect-square object-cover transition-all duration-700 ease-out group-hover:scale-[1.04]"
+          className="w-full aspect-square object-cover transition-all duration-800 ease-out group-hover:scale-[1.08]"
         />
       </div>
 
@@ -67,7 +68,7 @@ export default function ColorCard({ color }: { color: string }) {
           <button
             key={s}
             onClick={() => setSize(s)}
-            className={`px-3 md:px-4 py-1.5 border rounded-full text-xs md:text-sm transition-all duration-200 whitespace-nowrap ${
+            className={`px-3 md:px-4 py-1.5 border rounded-full text-xs md:text-sm transition-all duration-300 whitespace-nowrap cursor-pointer ${
               size === s
                 ? "bg-white text-black border-white"
                 : "border-white/15 text-zinc-400 hover:border-white/40 hover:text-white"
@@ -80,7 +81,7 @@ export default function ColorCard({ color }: { color: string }) {
 
       <div className="text-center mb-5">
         <p className="text-zinc-600 line-through text-xs tracking-wide">{COMPARE_PRICE} EGP</p>
-        <p className="text-2xl font-bold tracking-tight">{BASE_PRICE} EGP</p>
+        <p className="text-2xl font-bold tracking-tight animate-price-glow">{BASE_PRICE} EGP</p>
       </div>
 
       <button
@@ -88,7 +89,7 @@ export default function ColorCard({ color }: { color: string }) {
         className={`w-full py-3 rounded-full font-semibold flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer ${
           added
             ? "bg-green-500 text-white"
-            : "bg-white text-black hover:scale-[1.02] hover:shadow-[0_0_24px_-4px_rgba(255,255,255,0.15)]"
+            : "bg-white text-black hover:scale-[1.03] hover:shadow-[0_0_32px_-6px_rgba(255,255,255,0.2)] active:scale-[0.98]"
         }`}
       >
         {added ? (
@@ -106,7 +107,7 @@ export default function ColorCard({ color }: { color: string }) {
 
       <button
         onClick={handleBuyNow}
-        className="w-full mt-2.5 border border-white/15 py-3 rounded-full font-semibold text-sm text-zinc-300 hover:bg-white hover:text-black hover:border-white transition-all duration-300 cursor-pointer"
+        className="w-full mt-2.5 border border-white/15 py-3 rounded-full font-semibold text-sm text-zinc-300 hover:bg-white hover:text-black hover:border-white transition-all duration-300 cursor-pointer active:scale-[0.98]"
       >
         Buy Now
       </button>

@@ -26,9 +26,9 @@ export default function Header() {
   }, [dropdownOpen]);
 
   return (
-    <nav className="fixed top-0 w-full z-50 backdrop-blur-lg bg-black/50 border-b border-white/[0.06]">
+    <nav className="fixed top-0 w-full z-50 backdrop-blur-xl bg-black/60 border-b border-white/[0.06]">
       <div className="max-w-7xl mx-auto px-6 py-3 md:py-4 flex items-center justify-between">
-        <button onClick={() => router.push("/")} className="flex items-center">
+        <button onClick={() => router.push("/")} className="flex items-center cursor-pointer">
           <img
             src="/logo.png"
             alt="Blank EG"
@@ -40,7 +40,7 @@ export default function Header() {
           <a
             href="https://wa.me/201287659463"
             target="_blank"
-            className="text-xs md:text-sm text-zinc-500 hover:text-white tracking-wider uppercase transition hidden sm:block"
+            className="text-xs md:text-sm text-zinc-500 hover:text-white tracking-wider uppercase transition-all duration-300 hidden sm:block relative after:absolute after:bottom-0 after:left-0 after:h-px after:w-0 after:bg-white after:transition-all after:duration-300 hover:after:w-full"
           >
             WhatsApp
           </a>
@@ -49,7 +49,7 @@ export default function Header() {
             <div className="flex items-center relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition cursor-pointer"
+                className="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-all duration-300 cursor-pointer"
               >
                 <User size={15} />
                 <span className="hidden sm:inline text-xs truncate max-w-[100px]">
@@ -58,17 +58,18 @@ export default function Header() {
               </button>
 
               {dropdownOpen && (
-                <div className="absolute top-full right-0 mt-3 w-52 bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl py-2 animate-dropdown-in origin-top-right">
+                <div className="absolute top-full right-0 mt-3 w-52 bg-zinc-900/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-2xl py-2 animate-dropdown-in origin-top-right overflow-hidden">
+                  <div className="absolute top-0 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
                   <button
                     onClick={() => { setDropdownOpen(false); router.push("/account"); }}
-                    className="w-full flex items-center gap-3 px-5 py-3 text-sm text-zinc-400 hover:text-white hover:bg-white/[0.04] transition text-left"
+                    className="w-full flex items-center gap-3 px-5 py-3 text-sm text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-all duration-200 text-left"
                   >
                     <Settings size={14} />
                     Profile Settings
                   </button>
                   <button
                     onClick={() => { setDropdownOpen(false); router.push("/account"); }}
-                    className="w-full flex items-center gap-3 px-5 py-3 text-sm text-zinc-400 hover:text-white hover:bg-white/[0.04] transition text-left"
+                    className="w-full flex items-center gap-3 px-5 py-3 text-sm text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-all duration-200 text-left"
                   >
                     <Package size={14} />
                     My Orders
@@ -76,7 +77,7 @@ export default function Header() {
                   <div className="border-t border-white/[0.06] my-1" />
                   <button
                     onClick={() => { setDropdownOpen(false); logout(); }}
-                    className="w-full flex items-center gap-3 px-5 py-3 text-sm text-red-400/80 hover:text-red-400 hover:bg-white/[0.04] transition text-left"
+                    className="w-full flex items-center gap-3 px-5 py-3 text-sm text-red-400/80 hover:text-red-400 hover:bg-white/[0.04] transition-all duration-200 text-left"
                   >
                     <LogOut size={14} />
                     Logout
@@ -87,7 +88,7 @@ export default function Header() {
           ) : (
             <button
               onClick={() => router.push("/login")}
-              className="text-xs text-zinc-500 hover:text-white tracking-wider uppercase transition"
+              className="text-xs text-zinc-500 hover:text-white tracking-wider uppercase transition-all duration-300 relative after:absolute after:bottom-0 after:left-0 after:h-px after:w-0 after:bg-white after:transition-all after:duration-300 hover:after:w-full"
             >
               Sign In
             </button>
@@ -95,7 +96,7 @@ export default function Header() {
 
           <button
             onClick={() => router.push("/cart")}
-            className="relative flex items-center gap-2 bg-white text-black px-4 md:px-5 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-medium hover:scale-[1.03] hover:shadow-[0_0_24px_-4px_rgba(255,255,255,0.2)] transition-all duration-300"
+            className="relative flex items-center gap-2 bg-white text-black px-4 md:px-5 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-semibold hover:scale-[1.03] hover:shadow-[0_0_24px_-4px_rgba(255,255,255,0.2)] active:scale-[0.97] transition-all duration-300 cursor-pointer"
           >
             <ShoppingCart size={16} />
             <span className="hidden sm:inline">Cart</span>
