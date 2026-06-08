@@ -119,4 +119,5 @@ export const STATUS_OPTIONS: OrderStatus[] = [
 
 export const DELIVERY_THRESHOLD = 1000;
 export const DELIVERY_FEE = 50;
-export const BASE_PRICE = 395;
+export const BASE_PRICE = 495;
+export const COMPARE_PRICE = 550;

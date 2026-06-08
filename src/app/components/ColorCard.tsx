@@ -5,7 +5,7 @@ import { ShoppingCart, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCart } from "../hooks/useCart";
 import { useToast } from "./Toast";
-import { BASE_PRICE } from "@/types";
+import { BASE_PRICE, COMPARE_PRICE } from "@/types";
 
 const SIZES = ["M", "L", "XL", "XXL"] as const;
 
@@ -79,7 +79,7 @@ export default function ColorCard({ color }: { color: string }) {
       </div>
 
       <div className="text-center mb-5">
-        <p className="text-zinc-500 line-through text-sm">450 EGP</p>
+        <p className="text-zinc-500 line-through text-sm">{COMPARE_PRICE} EGP</p>
         <p className="text-2xl font-bold">{BASE_PRICE} EGP</p>
       </div>
 

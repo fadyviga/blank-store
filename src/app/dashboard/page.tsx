@@ -35,7 +35,7 @@ import {
   updateOrderDetails,
 } from "../../lib/order";
 import type { Order, OrderStatus, Product, ProductVariant, CustomerProfile } from "@/types";
-import { STATUS_COLORS, STATUS_OPTIONS, BASE_PRICE, DELIVERY_FEE, DELIVERY_THRESHOLD } from "@/types";
+import { STATUS_COLORS, STATUS_OPTIONS, BASE_PRICE, COMPARE_PRICE, DELIVERY_FEE, DELIVERY_THRESHOLD } from "@/types";
 import { useToast } from "../components/Toast";
 import PurchasesTab from "./PurchasesTab";
 import ExpensesTab from "./ExpensesTab";
@@ -745,7 +745,7 @@ function ProductsTab({ userRole }: { userRole: "admin" | "viewer" }) {
     image: string;
     images: string[];
     sortOrder: number;
-  }>({ name: "", description: "", basePrice: BASE_PRICE, price: BASE_PRICE, comparePrice: "", category: "tees", image: "", images: [], sortOrder: 0 });
+  }>({ name: "", description: "", basePrice: BASE_PRICE, price: BASE_PRICE, comparePrice: String(COMPARE_PRICE), category: "tees", image: "", images: [], sortOrder: 0 });
   const [editingProduct, setEditingProduct] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [newImageUrl, setNewImageUrl] = useState("");
@@ -805,7 +805,7 @@ function ProductsTab({ userRole }: { userRole: "admin" | "viewer" }) {
         setShowForm(false);
         setEditingProduct(null);
         setNewImageUrl("");
-        setProductForm({ name: "", description: "", basePrice: BASE_PRICE, price: BASE_PRICE, comparePrice: "", category: "tees", image: "", images: [], sortOrder: 0 });
+        setProductForm({ name: "", description: "", basePrice: BASE_PRICE, price: BASE_PRICE, comparePrice: String(COMPARE_PRICE), category: "tees", image: "", images: [], sortOrder: 0 });
         fetchProducts();
       }
     } catch (err) {
@@ -867,7 +867,7 @@ function ProductsTab({ userRole }: { userRole: "admin" | "viewer" }) {
           )}
           {userRole === "admin" && (
             <button
-              onClick={() => { setShowForm(!showForm); setEditingProduct(null); setNewImageUrl(""); setProductForm({ name: "", description: "", basePrice: BASE_PRICE, price: BASE_PRICE, comparePrice: "", category: "tees", image: "", images: [], sortOrder: 0 }); }}
+              onClick={() => { setShowForm(!showForm); setEditingProduct(null); setNewImageUrl(""); setProductForm({ name: "", description: "", basePrice: BASE_PRICE, price: BASE_PRICE, comparePrice: String(COMPARE_PRICE), category: "tees", image: "", images: [], sortOrder: 0 }); }}
               className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-bold hover:scale-[1.02] transition"
             >
               <Plus size={16} /> Add Product
@@ -900,7 +900,7 @@ function ProductsTab({ userRole }: { userRole: "admin" | "viewer" }) {
               <input
                 type="number" value={productForm.comparePrice}
                 onChange={(e) => setProductForm((p) => ({ ...p, comparePrice: e.target.value }))}
-                placeholder="e.g. 450"
+                placeholder="e.g. 550"
                 className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30"
               />
             </div>

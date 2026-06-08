@@ -4,8 +4,7 @@ import { ShoppingCart, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCart } from "../hooks/useCart";
 import { useToast } from "./Toast";
-
-const PRICE = 495;
+import { BASE_PRICE, COMPARE_PRICE } from "@/types";
 
 export default function ProductCard({
   color,
@@ -26,7 +25,7 @@ export default function ProductCard({
       name: productName,
       color,
       size: selectedSize,
-      price: PRICE,
+      price: BASE_PRICE,
       image,
       quantity: 1,
     });
@@ -39,7 +38,7 @@ export default function ProductCard({
       name: productName,
       color,
       size: selectedSize,
-      price: PRICE,
+      price: BASE_PRICE,
       image,
       quantity: 1,
     });
@@ -63,7 +62,7 @@ export default function ProductCard({
 
       <h3 className="text-center font-bold uppercase text-xl mb-4">{color}</h3>
 
-      <SizeSelector sizes={sizes} onAddToCart={handleAddToCart} onBuyNow={handleBuyNow} price={PRICE} />
+      <SizeSelector sizes={sizes} onAddToCart={handleAddToCart} onBuyNow={handleBuyNow} />
     </div>
   );
 }
@@ -72,12 +71,10 @@ function SizeSelector({
   sizes,
   onAddToCart,
   onBuyNow,
-  price,
 }: {
   sizes: readonly string[];
   onAddToCart: (size: string) => void;
   onBuyNow: (size: string) => void;
-  price: number;
 }) {
   return (
     <div className="space-y-3">
@@ -94,8 +91,8 @@ function SizeSelector({
       </div>
 
       <div className="text-center mb-5">
-        <p className="text-zinc-500 line-through text-sm">550 EGP</p>
-        <p className="text-2xl font-bold">{price} EGP</p>
+        <p className="text-zinc-500 line-through text-sm">{COMPARE_PRICE} EGP</p>
+        <p className="text-2xl font-bold">{BASE_PRICE} EGP</p>
       </div>
 
       <button
