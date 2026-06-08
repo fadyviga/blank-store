@@ -79,77 +79,73 @@ export default function AccountPage() {
   if (!user) return null;
 
   return (
-    <main className="min-h-screen bg-black text-white p-6 md:p-10">
+    <main className="min-h-screen bg-black text-white px-6 py-10 md:px-10 md:py-14">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center gap-4 mb-12">
-          <div className="w-14 h-14 rounded-full bg-zinc-800 flex items-center justify-center">
-            <User size={24} className="text-zinc-400" />
+        <div className="flex items-center gap-4 mb-12 md:mb-14">
+          <div className="w-14 h-14 rounded-full bg-zinc-800/80 flex items-center justify-center border border-white/[0.06]">
+            <User size={22} className="text-zinc-400" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold">{user.email}</h1>
-            <p className="text-zinc-500 text-sm">
+            <h1 className="text-2xl md:text-3xl font-black tracking-tight">{user.email}</h1>
+            <p className="text-zinc-500 text-sm tracking-wide">
               {user.role === "admin" ? "Administrator" : "Customer"}
             </p>
           </div>
         </div>
 
-        <section className="border-t border-white/10 pt-10 mb-12">
-          <h2 className="text-2xl font-bold mb-6">Profile Settings</h2>
+        <section className="mb-14 md:mb-16">
+          <h2 className="text-lg font-bold tracking-tight mb-6">Profile Settings</h2>
 
-          <div className="bg-zinc-950 border border-white/10 rounded-3xl p-6 md:p-8 space-y-6">
+          <div className="bg-zinc-900/50 border border-white/[0.06] rounded-3xl p-6 md:p-8 space-y-5 md:space-y-6">
             <div>
-              <label className="block text-sm text-zinc-400 mb-2">Email</label>
+              <label className="block text-xs text-zinc-500 tracking-wider uppercase mb-2.5">Email</label>
               <input
                 type="text"
                 value={user.email}
                 disabled
-                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-5 py-4 outline-none text-zinc-500 cursor-not-allowed"
+                className="w-full bg-zinc-900/50 border border-white/[0.06] rounded-xl px-5 py-4 outline-none text-zinc-500 cursor-not-allowed text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-sm text-zinc-400 mb-2">
-                Full Name
-              </label>
+              <label className="block text-xs text-zinc-500 tracking-wider uppercase mb-2.5">Full Name</label>
               <input
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Your name"
-                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-white/30 transition"
+                className="w-full bg-zinc-900/50 border border-white/[0.06] rounded-xl px-5 py-4 outline-none text-sm transition-all duration-200 focus:border-white/30"
               />
             </div>
 
             <div>
-              <label className="block text-sm text-zinc-400 mb-2">
-                Phone Number
-              </label>
+              <label className="block text-xs text-zinc-500 tracking-wider uppercase mb-2.5">Phone Number</label>
               <div className="flex gap-3">
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="e.g. 01012345678"
-                  className="flex-1 bg-zinc-900 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-white/30 transition"
+                  className="flex-1 bg-zinc-900/50 border border-white/[0.06] rounded-xl px-5 py-4 outline-none text-sm transition-all duration-200 focus:border-white/30"
                 />
                 <button
                   onClick={handleProfileSave}
-                  className="bg-white text-black px-5 py-4 rounded-xl font-bold text-sm hover:scale-[1.02] transition flex items-center gap-2"
+                  className="bg-white text-black px-6 py-4 rounded-xl font-semibold text-sm hover:scale-[1.02] hover:shadow-[0_0_24px_-4px_rgba(255,255,255,0.15)] transition-all duration-300 flex items-center gap-2 cursor-pointer"
                 >
-                  <Save size={16} />
+                  <Save size={15} />
                   Save
                 </button>
               </div>
               {profileMsg && (
                 <p
-                  className={`text-sm mt-2 flex items-center gap-1 ${
+                  className={`text-xs mt-2 flex items-center gap-1.5 ${
                     profileMsg.type === "success" ? "text-green-400" : "text-red-400"
                   }`}
                 >
                   {profileMsg.type === "success" ? (
-                    <Check size={14} />
+                    <Check size={12} />
                   ) : (
-                    <X size={14} />
+                    <X size={12} />
                   )}
                   {profileMsg.text}
                 </p>
@@ -158,62 +154,56 @@ export default function AccountPage() {
           </div>
         </section>
 
-        <section className="border-t border-white/10 pt-10 mb-12">
-          <div className="flex items-center gap-2 mb-6">
-            <Lock size={20} className="text-zinc-400" />
-            <h2 className="text-2xl font-bold">Change Password</h2>
+        <section className="mb-14 md:mb-16">
+          <div className="flex items-center gap-2.5 mb-6">
+            <Lock size={17} className="text-zinc-400" />
+            <h2 className="text-lg font-bold tracking-tight">Change Password</h2>
           </div>
 
-          <div className="bg-zinc-950 border border-white/10 rounded-3xl p-6 md:p-8 space-y-5 max-w-md">
+          <div className="bg-zinc-900/50 border border-white/[0.06] rounded-3xl p-6 md:p-8 space-y-5 max-w-md">
             <div>
-              <label className="block text-sm text-zinc-400 mb-2">
-                Current Password
-              </label>
+              <label className="block text-xs text-zinc-500 tracking-wider uppercase mb-2.5">Current Password</label>
               <input
                 type="password"
                 value={currentPw}
                 onChange={(e) => setCurrentPw(e.target.value)}
-                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-white/30 transition"
+                className="w-full bg-zinc-900/50 border border-white/[0.06] rounded-xl px-5 py-4 outline-none text-sm transition-all duration-200 focus:border-white/30"
               />
             </div>
             <div>
-              <label className="block text-sm text-zinc-400 mb-2">
-                New Password
-              </label>
+              <label className="block text-xs text-zinc-500 tracking-wider uppercase mb-2.5">New Password</label>
               <input
                 type="password"
                 value={newPw}
                 onChange={(e) => setNewPw(e.target.value)}
-                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-white/30 transition"
+                className="w-full bg-zinc-900/50 border border-white/[0.06] rounded-xl px-5 py-4 outline-none text-sm transition-all duration-200 focus:border-white/30"
               />
             </div>
             <div>
-              <label className="block text-sm text-zinc-400 mb-2">
-                Confirm New Password
-              </label>
+              <label className="block text-xs text-zinc-500 tracking-wider uppercase mb-2.5">Confirm New Password</label>
               <input
                 type="password"
                 value={confirmPw}
                 onChange={(e) => setConfirmPw(e.target.value)}
-                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-white/30 transition"
+                className="w-full bg-zinc-900/50 border border-white/[0.06] rounded-xl px-5 py-4 outline-none text-sm transition-all duration-200 focus:border-white/30"
               />
             </div>
             <button
               onClick={handlePasswordChange}
-              className="bg-white text-black px-6 py-4 rounded-xl font-bold text-sm hover:scale-[1.02] transition"
+              className="bg-white text-black w-full py-4 rounded-xl font-semibold text-sm hover:scale-[1.02] hover:shadow-[0_0_24px_-4px_rgba(255,255,255,0.15)] transition-all duration-300 cursor-pointer"
             >
               Update Password
             </button>
             {pwMsg && (
               <p
-                className={`text-sm flex items-center gap-1 ${
+                className={`text-xs flex items-center gap-1.5 ${
                   pwMsg.type === "success" ? "text-green-400" : "text-red-400"
                 }`}
               >
                 {pwMsg.type === "success" ? (
-                  <Check size={14} />
+                  <Check size={12} />
                 ) : (
-                  <X size={14} />
+                  <X size={12} />
                 )}
                 {pwMsg.text}
               </p>
@@ -221,39 +211,40 @@ export default function AccountPage() {
           </div>
         </section>
 
-        <section className="border-t border-white/10 pt-10">
-          <div className="flex items-center gap-2 mb-6">
-            <Package size={20} className="text-zinc-400" />
-            <h2 className="text-2xl font-bold">My Orders</h2>
+        <section>
+          <div className="flex items-center gap-2.5 mb-6">
+            <Package size={17} className="text-zinc-400" />
+            <h2 className="text-lg font-bold tracking-tight">My Orders</h2>
           </div>
 
           {orders.length === 0 ? (
-            <div className="bg-zinc-950 border border-white/10 rounded-3xl p-10 text-center">
-              <p className="text-zinc-500 mb-4">No orders yet</p>
+            <div className="bg-zinc-900/50 border border-white/[0.06] rounded-3xl p-12 md:p-14 text-center">
+              <Package size={40} className="mx-auto text-zinc-700 mb-4" />
+              <p className="text-zinc-500 mb-6">No orders yet</p>
               <button
                 onClick={() => router.push("/")}
-                className="bg-white text-black px-6 py-3 rounded-full font-medium hover:scale-105 transition"
+                className="bg-white text-black px-8 py-3.5 rounded-full font-semibold text-sm hover:scale-[1.02] hover:shadow-[0_0_24px_-4px_rgba(255,255,255,0.15)] transition-all duration-300 cursor-pointer"
               >
                 Start Shopping
               </button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               {orders.map((order) => (
                 <div
                   key={order.id}
-                  className="bg-zinc-950 border border-white/10 rounded-2xl p-5"
+                  className="bg-zinc-900/50 border border-white/[0.06] rounded-2xl p-5 md:p-6 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.01]"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xs font-mono text-zinc-500 tracking-wider">
                       {order.displayId}
                     </span>
-                    <span className="text-xs font-medium capitalize text-zinc-400">
+                    <span className="text-[11px] font-medium capitalize text-zinc-400 tracking-wide">
                       {order.status}
                     </span>
                   </div>
-                  <p className="text-lg font-bold">{order.total} EGP</p>
-                  <p className="text-zinc-500 text-xs mt-1">
+                  <p className="text-xl font-bold tracking-tight">{order.total} EGP</p>
+                  <p className="text-zinc-500 text-xs mt-1.5">
                     {new Date(order.createdAt).toLocaleDateString("en-GB", {
                       day: "numeric",
                       month: "short",

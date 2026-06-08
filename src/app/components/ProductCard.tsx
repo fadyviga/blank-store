@@ -48,7 +48,7 @@ export default function ProductCard({
   const sizes = ["M", "L", "XL", "XXL"] as const;
 
   return (
-    <div className="border border-white/10 rounded-3xl p-6 hover:border-white/30 transition duration-300 bg-zinc-950">
+    <div className="group border border-white/[0.07] rounded-3xl p-5 md:p-6 transition-all duration-500 bg-zinc-950 hover:border-white/20 hover:bg-white/[0.015] hover:shadow-[0_12px_40px_-8px_rgba(255,255,255,0.05)] hover:-translate-y-0.5">
       <div className="overflow-hidden rounded-2xl mb-4">
         <img
           src={image}
@@ -56,11 +56,11 @@ export default function ProductCard({
           onError={(e) => {
             (e.target as HTMLImageElement).src = "/placeholder.svg";
           }}
-          className="w-full aspect-square object-cover hover:scale-105 transition duration-500"
+          className="w-full aspect-square object-cover transition-all duration-700 ease-out group-hover:scale-[1.04]"
         />
       </div>
 
-      <h3 className="text-center font-bold uppercase text-xl mb-4">{color}</h3>
+      <h3 className="text-center font-bold text-lg md:text-xl mb-4 tracking-tight">{color}</h3>
 
       <SizeSelector sizes={sizes} onAddToCart={handleAddToCart} onBuyNow={handleBuyNow} />
     </div>

@@ -191,10 +191,10 @@ export default function CheckoutPage() {
   };
 
   const inputClass = (field: string) =>
-    `w-full bg-black border rounded-xl px-5 py-4 outline-none transition ${
+    `w-full bg-black border rounded-xl px-5 py-4 outline-none transition-all duration-200 ${
       touched[field] && errors[field as keyof Errors]
         ? "border-red-500"
-        : "border-white/10 focus:border-white/30"
+        : "border-white/[0.08] focus:border-white/30"
     }`;
 
   const itemCount = Array.isArray(cart)
@@ -211,17 +211,17 @@ export default function CheckoutPage() {
   const total = (hasBundle ? bundleTotal : cartTotal) + delivery - discount;
 
   return (
-    <main className="min-h-screen bg-black text-white p-6 md:p-10">
-      <div className="max-w-2xl mx-auto">
+    <main className="min-h-screen bg-black text-white px-6 py-10 md:px-10 md:py-14">
+      <div className="max-w-5xl mx-auto">
         <button
           onClick={() => router.push("/cart")}
-          className="flex items-center gap-2 text-zinc-400 hover:text-white transition mb-8"
+          className="flex items-center gap-2 text-sm text-zinc-500 hover:text-white transition-all duration-300 mb-10 group"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={15} className="transition-transform duration-300 group-hover:-translate-x-0.5" />
           Back to Cart
         </button>
 
-        <h1 className="text-4xl font-bold mb-8">Checkout</h1>
+        <h1 className="text-[clamp(2rem,4vw,3rem)] font-black tracking-tight mb-10">Checkout</h1>
 
         {apiDiagnostics && (
           <div className="mb-4 text-[10px] font-mono text-zinc-600 bg-zinc-950 border border-white/5 rounded-xl px-4 py-2">
@@ -243,119 +243,118 @@ export default function CheckoutPage() {
         ) : (
           <div className="grid md:grid-cols-5 gap-8">
             <div className="md:col-span-3 order-2 md:order-1">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  placeOrder();
-                }}
-                className="space-y-6"
-              >
-                <div>
-                  <label className="block text-sm text-zinc-400 mb-2">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Ahmed Hassan"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    onBlur={() => handleBlur("name")}
-                    className={inputClass("name")}
-                  />
-                  {touched.name && errors.name && (
-                    <p className="text-red-400 text-sm mt-1.5 flex items-center gap-1">
-                      <span>⚠</span> {errors.name}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm text-zinc-400 mb-2">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="e.g. 01012345678"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    onBlur={() => handleBlur("phone")}
-                    className={inputClass("phone")}
-                  />
-                  {touched.phone && errors.phone && (
-                    <p className="text-red-400 text-sm mt-1.5 flex items-center gap-1">
-                      <span>⚠</span> {errors.phone}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm text-zinc-400 mb-2">
-                    Delivery Address
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 15 El-Tahrir St, Downtown, Cairo"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    onBlur={() => handleBlur("address")}
-                    className={inputClass("address")}
-                  />
-                  {touched.address && errors.address && (
-                    <p className="text-red-400 text-sm mt-1.5 flex items-center gap-1">
-                      <span>⚠</span> {errors.address}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2 text-sm text-zinc-400 bg-zinc-900 rounded-xl px-4 py-3 border border-white/5">
-                  <span>💰</span>
-                  <span>Cash on delivery available</span>
-                </div>
-
-                {submitError && (
-                  <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl px-4 py-3 text-center">
-                    {submitError}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition ${
-                    isSubmitting
-                      ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
-                      : "bg-white text-black hover:scale-[1.02] cursor-pointer"
-                  }`}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    placeOrder();
+                  }}
+                  className="space-y-5 md:space-y-6"
                 >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 size={20} className="animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingBag size={20} />
-                      Place Order
-                    </>
-                  )}
-                </button>
+                  <div>
+                    <label className="block text-xs text-zinc-500 tracking-wider uppercase mb-2.5">
+                      Full Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Ahmed Hassan"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      onBlur={() => handleBlur("name")}
+                      className={inputClass("name")}
+                    />
+                    {touched.name && errors.name && (
+                      <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                        <span>⚠</span> {errors.name}
+                      </p>
+                    )}
+                  </div>
 
-                <p className="text-center text-xs text-zinc-500">
-                  You&apos;ll receive a confirmation message shortly after
-                  placing your order.
-                </p>
-              </form>
+                  <div>
+                    <label className="block text-xs text-zinc-500 tracking-wider uppercase mb-2.5">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="e.g. 01012345678"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      onBlur={() => handleBlur("phone")}
+                      className={inputClass("phone")}
+                    />
+                    {touched.phone && errors.phone && (
+                      <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                        <span>⚠</span> {errors.phone}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-zinc-500 tracking-wider uppercase mb-2.5">
+                      Delivery Address
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 15 El-Tahrir St, Downtown, Cairo"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      onBlur={() => handleBlur("address")}
+                      className={inputClass("address")}
+                    />
+                    {touched.address && errors.address && (
+                      <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                        <span>⚠</span> {errors.address}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2.5 text-sm text-zinc-400 bg-zinc-900/50 rounded-xl px-4 py-3 border border-white/[0.05]">
+                    <span className="text-base">💰</span>
+                    <span className="text-sm">Cash on delivery available</span>
+                  </div>
+
+                  {submitError && (
+                    <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl px-4 py-3 text-center">
+                      {submitError}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer ${
+                      isSubmitting
+                        ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+                        : "bg-white text-black hover:scale-[1.02] hover:shadow-[0_0_32px_-6px_rgba(255,255,255,0.2)]"
+                    }`}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 size={18} />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingBag size={18} />
+                        Place Order
+                      </>
+                    )}
+                  </button>
+
+                  <p className="text-center text-xs text-zinc-600 tracking-wide">
+                    You&apos;ll receive a confirmation message shortly after placing your order.
+                  </p>
+                </form>
             </div>
 
             <div className="md:col-span-2 order-1 md:order-2">
-              <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 sticky top-24">
+              <div className="bg-zinc-900/80 border border-white/[0.07] rounded-3xl p-5 md:p-6 sticky top-28">
                 {hasBundle && (
                   <div className="mb-5 rounded-xl bg-white/[0.03] border border-zinc-500/20 p-3.5">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-white text-black flex items-center justify-center shrink-0">
-                        <Package size={15} />
+                        <Package size={14} />
                       </div>
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold leading-tight">
                           {bundle!.label} Bundle
                         </p>
@@ -364,72 +363,72 @@ export default function CheckoutPage() {
                         </p>
                       </div>
                       {bundle!.isBestValue && (
-                        <span className="ml-auto text-[9px] uppercase tracking-[0.2em] font-bold bg-gradient-to-r from-zinc-200 to-white text-black px-2 py-0.5 rounded-full shrink-0">
+                        <span className="text-[9px] uppercase tracking-[0.2em] font-bold bg-gradient-to-r from-zinc-200 to-white text-black px-2 py-0.5 rounded-full shrink-0">
                           Best Value
                         </span>
                       )}
                     </div>
                   </div>
                 )}
-                <h2 className="text-lg font-bold mb-5">Order Summary</h2>
+                <h2 className="text-base font-bold tracking-tight mb-5">Order Summary</h2>
 
-                <div className="space-y-4 mb-5">
+                <div className="space-y-3 mb-5">
                   {cart.map((item, index) => (
                     <div
                       key={index}
-                      className="flex gap-3 pb-4 border-b border-white/5 last:border-0"
+                      className="flex gap-3 pb-3 border-b border-white/[0.05] last:border-0"
                     >
                       <img
                         src={item.image}
                         alt={item.name}
-                        className="w-16 h-16 rounded-xl object-cover shrink-0"
+                        className="w-14 h-14 rounded-xl object-cover shrink-0"
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">
+                        <p className="font-medium text-sm truncate leading-tight">
                           {item.name}
                         </p>
-                        <p className="text-zinc-400 text-xs mt-0.5">
+                        <p className="text-zinc-500 text-xs mt-0.5">
                           {item.color} / {item.size}
                         </p>
-                        <p className="text-zinc-500 text-xs mt-0.5">
+                        <p className="text-zinc-600 text-xs mt-0.5">
                           Qty: {item.quantity}
                         </p>
                       </div>
                       <p className="text-sm font-medium shrink-0">
-                        {item.price * item.quantity} EGP
+                        {item.price * item.quantity} <span className="text-zinc-500 text-xs font-normal">EGP</span>
                       </p>
                     </div>
                   ))}
                 </div>
 
-                <div className="space-y-3 pt-4 pb-2 border-t border-white/10">
-                  <label className="text-xs text-zinc-500 flex items-center gap-1.5">
-                    <Tag size={12} /> Discount Code
+                <div className="space-y-3 pt-4 pb-2 border-t border-white/[0.06]">
+                  <label className="text-xs text-zinc-500 flex items-center gap-1.5 tracking-wide">
+                    <Tag size={11} /> Discount Code
                   </label>
                   {appliedCoupon ? (
                     <div className="flex items-center justify-between bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3">
                       <span className="text-sm text-green-400 font-medium">
                         {appliedCoupon.code}: -{appliedCoupon.discountValue} EGP
                       </span>
-                      <button onClick={removeCoupon} className="text-green-400 hover:text-green-300 shrink-0 ml-3">
-                        <XCircle size={16} />
+                      <button onClick={removeCoupon} className="text-green-400 hover:text-green-300 shrink-0 ml-3 transition cursor-pointer">
+                        <XCircle size={15} />
                       </button>
                     </div>
                   ) : (
                     <div className="flex gap-2 items-stretch">
                       <input
                         type="text"
-                        placeholder="Enter discount code"
+                        placeholder="Enter code"
                         value={couponCode}
                         onChange={(e) => { setCouponCode(e.target.value); setCouponError(""); }}
-                        className="flex-1 min-w-0 bg-black border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30"
+                        className="flex-1 min-w-0 bg-black border border-white/[0.08] rounded-xl px-4 py-3 text-sm outline-none transition-all duration-200 focus:border-white/30"
                       />
                       <button
                         onClick={applyCoupon}
                         disabled={couponLoading || !couponCode.trim()}
-                        className="shrink-0 px-5 py-3 bg-white text-black rounded-xl text-sm font-medium hover:scale-[1.02] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="shrink-0 px-5 py-3 bg-white text-black rounded-xl text-sm font-medium hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                       >
-                        {couponLoading ? <Loader2 size={16} className="animate-spin" /> : "Apply"}
+                        {couponLoading ? <Loader2 size={14} /> : "Apply"}
                       </button>
                     </div>
                   )}
@@ -438,25 +437,25 @@ export default function CheckoutPage() {
                   )}
                 </div>
 
-                <div className="pt-2 pb-2">
+                <div className="pt-3 pb-2">
                   <button
                     onClick={() => setSizeGuideOpen(true)}
-                    className="inline-flex items-center gap-2 text-xs text-zinc-500 hover:text-white transition"
+                    className="inline-flex items-center gap-2 text-xs text-zinc-500 hover:text-white transition-all duration-200 cursor-pointer"
                   >
-                    <Ruler size={13} />
+                    <Ruler size={12} />
                     Size Guide
                   </button>
                 </div>
 
-                <div className="space-y-2 pt-2 border-t border-white/10">
-                  <div className="flex justify-between text-sm text-zinc-400">
-                    <span>Items ({itemCount})</span>
-                    <span>{cartTotal} EGP</span>
+                <div className="space-y-2.5 pt-4 border-t border-white/[0.06]">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-zinc-400">Items ({itemCount})</span>
+                    <span className="text-zinc-300">{cartTotal} EGP</span>
                   </div>
                   {hasBundle && (
                     <div className="flex justify-between text-sm text-green-400">
                       <span className="flex items-center gap-1.5">
-                        <Package size={12} />
+                        <Package size={11} />
                         Bundle Discount
                       </span>
                       <span>-{bundleSavings} EGP</span>
@@ -469,8 +468,8 @@ export default function CheckoutPage() {
                       </span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm text-zinc-400">
-                    <span>Delivery</span>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-zinc-400">Delivery</span>
                     <span className={delivery === 0 ? "text-green-400" : "text-zinc-300"}>
                       {delivery === 0 ? (
                         <><s className="text-zinc-600 mr-1.5">50 EGP</s>FREE</>
@@ -485,9 +484,9 @@ export default function CheckoutPage() {
                       <span>-{discount} EGP</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-lg font-bold pt-2 border-t border-white/10">
+                  <div className="flex justify-between text-base font-bold pt-3 border-t border-white/[0.06]">
                     <span>Total</span>
-                    <span>{Math.max(0, total)} EGP</span>
+                    <span className="tracking-tight">{Math.max(0, total)} EGP</span>
                   </div>
                 </div>
               </div>

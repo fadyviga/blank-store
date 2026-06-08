@@ -62,19 +62,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-[90vw] max-w-sm pointer-events-none">
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-3 w-[90vw] max-w-sm pointer-events-none">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`pointer-events-auto flex items-center gap-3 bg-zinc-900 border border-white/10 border-l-4 ${colors[toast.type]} text-white px-5 py-3.5 rounded-2xl shadow-2xl animate-slide-up`}
+            className={`pointer-events-auto flex items-center gap-3 bg-zinc-900/95 backdrop-blur-xl border border-white/[0.08] border-l-4 ${colors[toast.type]} text-white px-5 py-3.5 rounded-2xl shadow-2xl animate-toast-in`}
           >
             {icons[toast.type]}
-            <span className="text-sm font-medium flex-1">{toast.message}</span>
+            <span className="text-sm font-medium flex-1 tracking-wide">{toast.message}</span>
             <button
               onClick={() => dismissToast(toast.id)}
-              className="text-zinc-500 hover:text-white transition"
+              className="text-zinc-600 hover:text-white transition cursor-pointer"
             >
-              <X size={14} />
+              <X size={13} />
             </button>
           </div>
         ))}

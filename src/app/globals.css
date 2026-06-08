@@ -25,6 +25,8 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body::-webkit-scrollbar {
@@ -40,57 +42,46 @@ body::-webkit-scrollbar {
   display: none;
 }
 
+::selection {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
 @keyframes fade-up {
-  from {
-    transform: translateY(8px);
-  }
-  to {
-    transform: translateY(0);
-  }
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 @keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(16px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes bump {
   0% { transform: scale(1); }
-  40% { transform: scale(1.2); }
+  40% { transform: scale(1.15); }
   100% { transform: scale(1); }
 }
 
 .animate-fade-up {
-  animation: fade-up 0.3s ease-out;
+  animation: fade-up 0.4s ease-out;
 }
 
 .animate-slide-up {
-  animation: slide-up 0.25s ease-out;
+  animation: slide-up 0.3s ease-out;
 }
 
 .animate-bump {
-  animation: bump 0.2s ease-out;
+  animation: bump 0.25s ease-out;
 }
 
 main {
-  animation: fade-up 0.35s ease-out;
+  animation: fade-up 0.4s ease-out;
 }
 
 @keyframes pop-in {
-  from {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .animate-pop-in {
@@ -99,7 +90,7 @@ main {
 
 @keyframes badge-float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+  50% { transform: translateY(-5px); }
 }
 
 .animate-badge-float {
@@ -107,8 +98,8 @@ main {
 }
 
 @keyframes badge-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(255,255,255,0.05), 0 0 60px rgba(255,255,255,0.02); }
-  50% { box-shadow: 0 0 40px rgba(255,255,255,0.12), 0 0 80px rgba(255,255,255,0.04); }
+  0%, 100% { box-shadow: 0 0 20px rgba(255,255,255,0.04), 0 0 60px rgba(255,255,255,0.01); }
+  50% { box-shadow: 0 0 40px rgba(255,255,255,0.1), 0 0 80px rgba(255,255,255,0.03); }
 }
 
 .animate-badge-glow {
@@ -121,7 +112,7 @@ main {
 }
 
 .animate-fade-in {
-  animation: fade-in 0.25s ease-out;
+  animation: fade-in 0.3s ease-out;
 }
 
 @keyframes scale-in {
@@ -130,17 +121,12 @@ main {
 }
 
 .animate-scale-in {
-  animation: scale-in 0.3s ease-out;
-}
-
-@keyframes slide-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  animation: scale-in 0.25s ease-out;
 }
 
 @keyframes spotlight {
   0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.03); }
+  50% { opacity: 0.7; transform: scale(1.02); }
 }
 
 .animate-spotlight {
@@ -176,7 +162,7 @@ main {
 
 @keyframes value-pulse {
   0%, 100% { opacity: 0.9; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.04); }
+  50% { opacity: 1; transform: scale(1.03); }
 }
 
 .animate-value-pulse {
@@ -184,47 +170,82 @@ main {
 }
 
 @keyframes offer-card-in {
-  from { opacity: 0; transform: translateY(20px) scale(0.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-offer-card-in {
-  animation: offer-card-in 0.6s ease-out forwards;
-}
-
-@keyframes offer-card-in-2 {
-  from { opacity: 0; transform: translateY(20px) scale(0.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  animation: offer-card-in 0.7s ease-out forwards;
 }
 
 .animate-offer-card-in-2 {
-  animation: offer-card-in-2 0.6s ease-out 0.15s forwards;
-}
-
-@keyframes offer-card-in-3 {
-  from { opacity: 0; transform: translateY(20px) scale(0.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  animation: offer-card-in 0.7s ease-out 0.15s forwards;
 }
 
 .animate-offer-card-in-3 {
-  animation: offer-card-in-3 0.6s ease-out 0.3s forwards;
+  animation: offer-card-in 0.7s ease-out 0.3s forwards;
 }
 
-@keyframes savings-count-up {
-  from { opacity: 0; transform: translateY(6px); }
+@keyframes savings-in {
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-savings-in {
-  animation: savings-count-up 0.5s ease-out 0.5s both;
+  animation: savings-in 0.5s ease-out 0.4s both;
 }
 
 @keyframes badge-pop {
-  0% { transform: scale(0); opacity: 0; }
-  60% { transform: scale(1.15); }
-  100% { transform: scale(1); opacity: 1; }
+  0% { opacity: 0; transform: scale(0); }
+  60% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 .animate-badge-pop {
-  animation: badge-pop 0.5s ease-out 1s both;
+  animation: badge-pop 0.45s ease-out 0.8s both;
+}
+
+@keyframes dropdown-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-dropdown-in {
+  animation: dropdown-in 0.2s ease-out;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-toast-in {
+  animation: toast-in 0.3s ease-out;
+}
+
+@keyframes toast-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-8px) scale(0.97); }
+}
+
+.animate-toast-out {
+  animation: toast-out 0.2s ease-in forwards;
+}
+
+@keyframes card-lift {
+  0% { transform: translateY(0); box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+  100% { transform: translateY(-3px); box-shadow: 0 12px 40px -8px rgba(255,255,255,0.08); }
+}
+
+.animate-card-lift {
+  animation: card-lift 0.4s ease-out forwards;
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out;
 }
