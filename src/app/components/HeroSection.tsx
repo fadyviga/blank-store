@@ -54,7 +54,7 @@ export default function HeroSection() {
       </div>
 
       <div className="relative z-20 w-full">
-        <div className="flex flex-col items-center text-center px-6 pt-28 pb-24 md:pb-32">
+        <div className="flex flex-col items-center text-center px-6 pt-16 md:pt-20 pb-24 md:pb-32">
 
           {/* Logo */}
           <div

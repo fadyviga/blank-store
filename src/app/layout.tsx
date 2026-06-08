@@ -4,6 +4,7 @@ import { CartProvider } from "./hooks/useCart";
 import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./components/Toast";
 import Header from "./components/Header";
+import AnnouncementBar from "./components/AnnouncementBar";
 import CursorSpotlight from "./components/CursorSpotlight";
 import "./globals.css";
 
@@ -69,6 +70,7 @@ export default function RootLayout({
         <AuthProvider>
           <CartProvider>
             <ToastProvider>
+              <AnnouncementBar />
               <Header />
               <div className="flex-1">{children}</div>
             </ToastProvider>
