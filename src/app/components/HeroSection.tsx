@@ -49,9 +49,6 @@ export default function HeroSection() {
                   <p className="text-white text-sm font-bold leading-tight">
                     Limited Offer &mdash; 10% OFF
                   </p>
-                  <p className="text-zinc-600 text-[10px] uppercase tracking-[0.2em]">
-                    Eid sale
-                  </p>
                 </div>
               </div>
             </div>
