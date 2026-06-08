@@ -32,7 +32,7 @@ export default function Header() {
           <img
             src="/logo.png"
             alt="Blank EG"
-            className="h-18 md:h-20 w-auto object-contain scale-110"
+            className="h-18 md:h-20 w-auto object-contain"
           />
         </button>
 
