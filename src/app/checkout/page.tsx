@@ -2,13 +2,19 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ShoppingBag, Loader2, Ruler, Tag, XCircle } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Loader2, Ruler, Tag, XCircle, Package } from "lucide-react";
 import { useCart } from "../hooks/useCart";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
 import { saveOrder } from "../../lib/order";
 import SizeChart from "../components/SizeChart";
-import { DELIVERY_THRESHOLD, DELIVERY_FEE } from "@/types";
+import {
+  DELIVERY_THRESHOLD,
+  DELIVERY_FEE,
+  getApplicableBundle,
+  getBundleTotal,
+  getBundleSavings,
+} from "@/types";
 
 interface Errors {
   name?: string;
@@ -87,11 +93,12 @@ export default function CheckoutPage() {
     setCouponError("");
     setAppliedCoupon(null);
     try {
-      console.log("[Checkout] Applying coupon:", couponCode.trim(), "orderTotal:", cartTotal + delivery);
+      const effectiveTotal = hasBundle ? bundleTotal + delivery : cartTotal + delivery;
+      console.log("[Checkout] Applying coupon:", couponCode.trim(), "orderTotal:", effectiveTotal);
       const res = await fetch("/api/coupons", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: couponCode.trim(), orderTotal: cartTotal + delivery }),
+        body: JSON.stringify({ code: couponCode.trim(), orderTotal: effectiveTotal }),
       });
       const data = await res.json();
       console.log("[Checkout] Coupon response:", data);
@@ -148,7 +155,7 @@ export default function CheckoutPage() {
           quantity: item.quantity,
           image: item.image,
         })),
-        subtotal: cartTotal,
+        subtotal: hasBundle ? bundleTotal : cartTotal,
         deliveryFee: delivery,
         total: Math.max(0, total),
         userId: user?.id,
@@ -190,13 +197,18 @@ export default function CheckoutPage() {
         : "border-white/10 focus:border-white/30"
     }`;
 
-  const delivery = cartTotal >= DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
-  const discount = appliedCoupon?.discountValue || 0;
-  const total = cartTotal + delivery - discount;
-
   const itemCount = Array.isArray(cart)
     ? cart.reduce((sum, item) => sum + (item.quantity || 0), 0)
     : 0;
+
+  const bundle = getApplicableBundle(itemCount);
+  const bundleTotal = getBundleTotal(itemCount);
+  const bundleSavings = getBundleSavings(itemCount);
+  const hasBundle = bundle !== null && bundleSavings > 0;
+
+  const delivery = cartTotal >= DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
+  const discount = appliedCoupon?.discountValue || 0;
+  const total = (hasBundle ? bundleTotal : cartTotal) + delivery - discount;
 
   return (
     <main className="min-h-screen bg-black text-white p-6 md:p-10">
@@ -337,6 +349,28 @@ export default function CheckoutPage() {
 
             <div className="md:col-span-2 order-1 md:order-2">
               <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 sticky top-24">
+                {hasBundle && (
+                  <div className="mb-5 rounded-xl bg-white/[0.03] border border-zinc-500/20 p-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-white text-black flex items-center justify-center shrink-0">
+                        <Package size={15} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold leading-tight">
+                          {bundle!.label} Bundle
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          {bundle!.price} EGP &mdash; Save {bundleSavings} EGP
+                        </p>
+                      </div>
+                      {bundle!.isBestValue && (
+                        <span className="ml-auto text-[9px] uppercase tracking-[0.2em] font-bold bg-gradient-to-r from-zinc-200 to-white text-black px-2 py-0.5 rounded-full shrink-0">
+                          Best Value
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <h2 className="text-lg font-bold mb-5">Order Summary</h2>
 
                 <div className="space-y-4 mb-5">
@@ -419,6 +453,22 @@ export default function CheckoutPage() {
                     <span>Items ({itemCount})</span>
                     <span>{cartTotal} EGP</span>
                   </div>
+                  {hasBundle && (
+                    <div className="flex justify-between text-sm text-green-400">
+                      <span className="flex items-center gap-1.5">
+                        <Package size={12} />
+                        Bundle Discount
+                      </span>
+                      <span>-{bundleSavings} EGP</span>
+                    </div>
+                  )}
+                  {hasBundle && bundle?.isBestValue && (
+                    <div className="flex justify-end">
+                      <span className="text-[10px] uppercase tracking-[0.2em] font-bold bg-gradient-to-r from-zinc-200 to-white text-black px-2.5 py-0.5 rounded-full">
+                        Best Value Bundle
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm text-zinc-400">
                     <span>Delivery</span>
                     <span className={delivery === 0 ? "text-green-400" : "text-zinc-300"}>

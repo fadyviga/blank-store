@@ -121,3 +121,38 @@ export const DELIVERY_THRESHOLD = 1000;
 export const DELIVERY_FEE = 50;
 export const BASE_PRICE = 495;
 export const COMPARE_PRICE = 550;
+
+// Bundle offer constants
+export const BUNDLE_2_COUNT = 2;
+export const BUNDLE_2_PRICE = 900;
+export const BUNDLE_3_COUNT = 3;
+export const BUNDLE_3_PRICE = 1250;
+export const BUNDLE_4_COUNT = 4;
+export const BUNDLE_4_PRICE = 1500;
+
+export interface BundleInfo {
+  count: number;
+  price: number;
+  label: string;
+  isBestValue: boolean;
+}
+
+export function getApplicableBundle(qty: number): BundleInfo | null {
+  if (qty >= BUNDLE_4_COUNT)
+    return { count: BUNDLE_4_COUNT, price: BUNDLE_4_PRICE, label: "4 Tees", isBestValue: true };
+  if (qty >= BUNDLE_3_COUNT)
+    return { count: BUNDLE_3_COUNT, price: BUNDLE_3_PRICE, label: "3 Tees", isBestValue: false };
+  if (qty >= BUNDLE_2_COUNT)
+    return { count: BUNDLE_2_COUNT, price: BUNDLE_2_PRICE, label: "2 Tees", isBestValue: false };
+  return null;
+}
+
+export function getBundleTotal(qty: number): number {
+  const bundle = getApplicableBundle(qty);
+  if (!bundle) return qty * BASE_PRICE;
+  return bundle.price + Math.max(0, qty - bundle.count) * BASE_PRICE;
+}
+
+export function getBundleSavings(qty: number): number {
+  return qty * BASE_PRICE - getBundleTotal(qty);
+}

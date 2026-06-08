@@ -146,3 +146,85 @@ main {
 .animate-spotlight {
   animation: spotlight 6s ease-in-out infinite;
 }
+
+@keyframes offer-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.animate-offer-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,0.03) 25%,
+    rgba(255,255,255,0.06) 50%,
+    rgba(255,255,255,0.03) 75%,
+    rgba(255,255,255,0) 100%
+  );
+  background-size: 200% 100%;
+  animation: offer-shimmer 4s ease-in-out infinite;
+}
+
+@keyframes glass-pulse {
+  0%, 100% { border-color: rgba(255,255,255,0.08); box-shadow: 0 0 20px rgba(255,255,255,0.02); }
+  50% { border-color: rgba(255,255,255,0.15); box-shadow: 0 0 40px rgba(255,255,255,0.05); }
+}
+
+.animate-glass-pulse {
+  animation: glass-pulse 3s ease-in-out infinite;
+}
+
+@keyframes value-pulse {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+.animate-value-pulse {
+  animation: value-pulse 2s ease-in-out infinite;
+}
+
+@keyframes offer-card-in {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-offer-card-in {
+  animation: offer-card-in 0.6s ease-out forwards;
+}
+
+@keyframes offer-card-in-2 {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-offer-card-in-2 {
+  animation: offer-card-in-2 0.6s ease-out 0.15s forwards;
+}
+
+@keyframes offer-card-in-3 {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-offer-card-in-3 {
+  animation: offer-card-in-3 0.6s ease-out 0.3s forwards;
+}
+
+@keyframes savings-count-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-savings-in {
+  animation: savings-count-up 0.5s ease-out 0.5s both;
+}
+
+@keyframes badge-pop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-badge-pop {
+  animation: badge-pop 0.5s ease-out 1s both;
+}
