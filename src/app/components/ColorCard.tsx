@@ -46,7 +46,12 @@ export default function ColorCard({ color }: { color: string }) {
     img.onload = () => setBackImageExists(true);
   }, [backImage]);
 
-  const handleAddToCart = () => {
+  const navigateToPDP = () => {
+    router.push(`/product/blank-tee?color=${color.toLowerCase()}`);
+  };
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
     addToCart({
       id: `${color}-${size}-${Date.now()}`,
       name: "Oversized Tee",
@@ -61,7 +66,8 @@ export default function ColorCard({ color }: { color: string }) {
     setTimeout(() => setAdded(false), 2500);
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = (e: React.MouseEvent) => {
+    e.stopPropagation();
     addToCart({
       id: `${color}-${size}-${Date.now()}`,
       name: "Oversized Tee",
@@ -74,7 +80,8 @@ export default function ColorCard({ color }: { color: string }) {
     router.push("/checkout");
   };
 
-  const handleQuickViewBuy = () => {
+  const handleQuickViewBuy = (e: React.MouseEvent) => {
+    e.stopPropagation();
     addToCart({
       id: `${color}-${size}-${Date.now()}`,
       name: "Oversized Tee",
@@ -92,7 +99,8 @@ export default function ColorCard({ color }: { color: string }) {
     <>
       <div
         ref={cardRef}
-        className="group border border-white/[0.07] rounded-3xl p-5 md:p-6 transition-all duration-700 bg-zinc-950 hover:border-white/25 hover:bg-white/[0.02] hover:shadow-[0_32px_64px_-16px_rgba(255,255,255,0.08)] hover:-translate-y-2"
+        onClick={navigateToPDP}
+        className="group border border-white/[0.07] rounded-3xl p-5 md:p-6 transition-all duration-700 bg-zinc-950 hover:border-white/25 hover:bg-white/[0.02] hover:shadow-[0_32px_64px_-16px_rgba(255,255,255,0.08)] hover:-translate-y-2 cursor-pointer"
         onMouseEnter={() => setHovered(true)}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => { setHovered(false); handleMouseLeave(); }}
@@ -123,7 +131,7 @@ export default function ColorCard({ color }: { color: string }) {
           {SIZES.map((s) => (
             <button
               key={s}
-              onClick={() => setSize(s)}
+              onClick={(e) => { e.stopPropagation(); setSize(s); }}
               className={`px-3 md:px-4 py-1.5 border rounded-full text-xs md:text-sm transition-all duration-300 whitespace-nowrap cursor-pointer ${
                 size === s
                   ? "bg-white text-black border-white"

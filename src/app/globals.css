@@ -518,6 +518,33 @@ main {
   animation: order-confirmed-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
 }
 
+/* ─── PDP COLOR CROSSFADE ─── */
+@keyframes color-fade-in {
+  from { opacity: 0; transform: scale(1.02); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-color-fade-in {
+  animation: color-fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slide-up-fade {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up-fade {
+  animation: slide-up-fade 0.4s ease-out forwards;
+}
+
+/* ─── PDP STAGGER ENTRANCE ─── */
+.pdp-detail-1 { animation-delay: 0.05s; }
+.pdp-detail-2 { animation-delay: 0.1s; }
+.pdp-detail-3 { animation-delay: 0.15s; }
+.pdp-detail-4 { animation-delay: 0.2s; }
+.pdp-detail-5 { animation-delay: 0.25s; }
+.pdp-detail-6 { animation-delay: 0.3s; }
+
 /* ─── CURSOR SPOTLIGHT ─── */
 .cursor-spotlight {
   position: fixed;
