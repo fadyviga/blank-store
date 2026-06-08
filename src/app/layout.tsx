@@ -4,6 +4,7 @@ import { CartProvider } from "./hooks/useCart";
 import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./components/Toast";
 import Header from "./components/Header";
+import CursorSpotlight from "./components/CursorSpotlight";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -74,6 +75,7 @@ export default function RootLayout({
           </CartProvider>
         </AuthProvider>
         <div className="grain-overlay" />
+        <CursorSpotlight />
       </body>
     </html>
   );

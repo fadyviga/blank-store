@@ -363,3 +363,83 @@ body::-webkit-scrollbar {
 main {
   animation: fade-up 0.4s ease-out;
 }
+
+/* ─── MARQUEE ─── */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 40s linear infinite;
+}
+
+.animate-marquee-delayed {
+  animation: marquee 40s linear infinite;
+  animation-delay: -20s;
+}
+
+/* ─── WATERMARK ─── */
+@keyframes watermark-float {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.02); }
+}
+
+.animate-watermark-float {
+  animation: watermark-float 12s ease-in-out infinite;
+}
+
+/* ─── PRODUCT FLOAT ─── */
+@keyframes product-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-product-float {
+  animation: product-float 6s ease-in-out infinite;
+}
+
+.animate-product-float-delayed {
+  animation: product-float 6s ease-in-out 3s infinite;
+}
+
+/* ─── CHECKMARK DRAW ─── */
+@keyframes checkmark-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+.animate-checkmark-draw {
+  animation: checkmark-draw 0.6s ease-out 0.3s forwards;
+}
+
+/* ─── ORDER CONFIRMED TEXT ─── */
+@keyframes order-confirmed-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-order-confirmed {
+  animation: order-confirmed-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-order-confirmed-2 {
+  animation: order-confirmed-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
+}
+
+.animate-order-confirmed-3 {
+  animation: order-confirmed-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
+}
+
+/* ─── CURSOR SPOTLIGHT ─── */
+.cursor-spotlight {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9998;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.025) 0%, transparent 70%);
+  transform: translate(-50%, -50%);
+  will-change: transform, opacity;
+  transition: opacity 0.3s ease;
+}
