@@ -358,14 +358,14 @@ function OverviewTab({
                   <p className="font-medium text-sm">{order.customer?.name || "Unknown"}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold">{order.productTotal} EGP</p>
-                  <span
-                    className={`text-[10px] font-medium px-2 py-0.5 rounded-full border capitalize ${
-                      STATUS_COLORS[order.status]
-                    }`}
-                  >
-                    {order.status}
-                  </span>
+                    <p className="font-bold">{order.total - order.delivery} EGP</p>
+                    <span
+                      className={`text-[10px] font-medium px-2 py-0.5 rounded-full border capitalize ${
+                        STATUS_COLORS[order.status]
+                      }`}
+                    >
+                      {order.status}
+                    </span>
                 </div>
               </div>
             ))
@@ -562,7 +562,7 @@ function OrdersTab({
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <p className="font-bold">{order.productTotal} EGP</p>
+                    <p className="font-bold">{order.total - order.delivery} EGP</p>
                     <p className="text-zinc-500 text-xs">
                       {order.createdAt
                         ? new Date(order.createdAt).toLocaleDateString("en-GB")
@@ -591,10 +591,9 @@ function OrdersTab({
                     </div>
                     <div>
                       <p className="text-xs text-zinc-500 mb-1 uppercase tracking-wider">Order Details</p>
-                      <p className="text-sm">Product Total: {order.productTotal} EGP</p>
+                      <p className="text-sm">Product Value: {order.total - order.delivery} EGP</p>
                       <p className="text-sm">Delivery: {order.delivery} EGP</p>
-                      <p className="text-sm">Discount: {order.discountAmount || 0} EGP</p>
-                      <p className="text-sm font-bold">Total: {order.productTotal - (order.discountAmount || 0)} EGP</p>
+                      <p className="text-sm font-bold">Final Checkout Total: {order.total} EGP</p>
                       <p className="text-sm text-zinc-400">
                         {new Date(order.createdAt).toLocaleString("en-GB")}
                       </p>
