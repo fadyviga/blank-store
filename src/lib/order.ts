@@ -146,9 +146,13 @@ export async function updateOrderDetails(
     status?: OrderStatus;
     internalNotes?: string;
     trackingNumber?: string;
+    subtotal?: number;
+    delivery?: number;
+    total?: number;
+    discountAmount?: number;
   }
-): Promise<void> {
-  await apiFetch("/orders", {
+): Promise<{ success: boolean; order?: Order }> {
+  return apiFetch<{ success: boolean; order?: Order }>("/orders", {
     method: "PATCH",
     body: JSON.stringify({ id, ...data }),
   });

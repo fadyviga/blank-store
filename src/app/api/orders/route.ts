@@ -487,7 +487,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { id, status, internalNotes, trackingNumber } = body;
+    const { id, status, internalNotes, trackingNumber, subtotal, delivery, total, discountAmount } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Order ID is required" }, { status: 400 });
@@ -537,6 +537,10 @@ export async function PATCH(request: NextRequest) {
     if (status) updates.status = status;
     if (internalNotes !== undefined) updates.internal_notes = internalNotes;
     if (trackingNumber !== undefined) updates.tracking_number = trackingNumber;
+    if (subtotal !== undefined) updates.subtotal = subtotal;
+    if (delivery !== undefined) updates.delivery_fee = delivery;
+    if (total !== undefined) updates.total = total;
+    if (discountAmount !== undefined) updates.discount_amount = discountAmount;
 
     const { error } = await admin.from("orders").update(updates).eq("id", id);
     if (error) {
@@ -604,6 +608,43 @@ export async function PATCH(request: NextRequest) {
     }
     if (stockFlagUpdate !== null) {
       responseBody.stockProcessed = stockFlagUpdate;
+    }
+
+    // If pricing was changed, fetch and return the updated order row
+    if (subtotal !== undefined || delivery !== undefined || total !== undefined || discountAmount !== undefined) {
+      const { data: updatedRow } = await admin.from("orders").select("*").eq("id", id).maybeSingle();
+      if (updatedRow) {
+        let parsedItems = updatedRow.items || [];
+        if (typeof updatedRow.items === "string") {
+          try { parsedItems = JSON.parse(updatedRow.items); } catch { parsedItems = []; }
+        }
+        const productTotal = (parsedItems || []).reduce(
+          (sum: number, item: any) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1),
+          0
+        );
+        responseBody.order = {
+          id: String(updatedRow.id),
+          displayId: updatedRow.display_id || `BLK-${String(updatedRow.id).padStart(6, "0")}`,
+          customer: {
+            name: updatedRow.name || "",
+            phone: updatedRow.phone || "",
+            address: updatedRow.address || updatedRow.customer_address || "",
+            email: updatedRow.email || "",
+          },
+          items: parsedItems,
+          productTotal,
+          subtotal: updatedRow.subtotal || updatedRow.total || 0,
+          delivery: updatedRow.delivery_fee ?? updatedRow.delivery ?? 0,
+          total: updatedRow.total || 0,
+          status: updatedRow.status || "pending",
+          createdAt: updatedRow.created_at || new Date().toISOString(),
+          userId: updatedRow.user_id || null,
+          internalNotes: updatedRow.internal_notes || "",
+          trackingNumber: updatedRow.tracking_number || "",
+          couponCode: updatedRow.coupon_code || undefined,
+          discountAmount: updatedRow.discount_amount ? Number(updatedRow.discount_amount) : undefined,
+        };
+      }
     }
 
     return NextResponse.json(responseBody);

@@ -412,6 +412,7 @@ function OrdersTab({
     order: Order;
     notes: string;
     tracking: string;
+    orderValue: number;
   } | null>(null);
 
   const filtered = useMemo(() => {
@@ -457,14 +458,15 @@ function OrdersTab({
   const handleSaveDetails = async () => {
     if (!editModal) return;
     try {
-      await updateOrderDetails(editModal.order.id, {
+      const result = await updateOrderDetails(editModal.order.id, {
         internalNotes: editModal.notes,
         trackingNumber: editModal.tracking,
+        total: editModal.orderValue + (editModal.order.delivery || 0),
       });
       setOrders((prev) =>
         prev.map((o) =>
           o.id === editModal.order.id
-            ? { ...o, internalNotes: editModal.notes, trackingNumber: editModal.tracking }
+            ? result.order || { ...o, internalNotes: editModal.notes, trackingNumber: editModal.tracking, total: editModal.orderValue + (editModal.order.delivery || 0) }
             : o
         )
       );
@@ -651,6 +653,7 @@ function OrdersTab({
                             order,
                             notes: order.internalNotes || "",
                             tracking: order.trackingNumber || "",
+                            orderValue: (order.total || 0) - (order.delivery || 0),
                           })
                         }
                         className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition"
@@ -682,6 +685,18 @@ function OrdersTab({
               </button>
             </div>
             <div className="space-y-4">
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">Order Value (excl. delivery)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={editModal.orderValue}
+                  onChange={(e) =>
+                    setEditModal((prev) => prev ? { ...prev, orderValue: Math.max(0, Number(e.target.value)) } : prev)
+                  }
+                  className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30 transition"
+                />
+              </div>
               <div>
                 <label className="block text-xs text-zinc-400 mb-1.5">Internal Notes</label>
                 <textarea
