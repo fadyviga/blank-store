@@ -593,7 +593,8 @@ function OrdersTab({
                       <p className="text-xs text-zinc-500 mb-1 uppercase tracking-wider">Order Details</p>
                       <p className="text-sm">Product Total: {order.productTotal} EGP</p>
                       <p className="text-sm">Delivery: {order.delivery} EGP</p>
-                      <p className="text-sm font-bold">Total: {order.total} EGP</p>
+                      <p className="text-sm">Discount: {order.discountAmount || 0} EGP</p>
+                      <p className="text-sm font-bold">Total: {order.productTotal - (order.discountAmount || 0)} EGP</p>
                       <p className="text-sm text-zinc-400">
                         {new Date(order.createdAt).toLocaleString("en-GB")}
                       </p>
