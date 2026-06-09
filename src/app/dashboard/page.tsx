@@ -119,7 +119,7 @@ function AuthenticatedDashboard({ userRole, onLogout }: { userRole: "admin" | "v
 
   const stats = useMemo(() => {
     const active = orders.filter((o) => o.status !== "cancelled");
-    const revenue = active.reduce((sum, o) => sum + (o.total || 0), 0);
+    const revenue = active.reduce((sum, o) => sum + ((o.total || 0) - (o.delivery || 0)), 0);
     const customers = new Set(orders.map((o) => o.customer?.phone).filter(Boolean));
     return {
       totalOrders: orders.length,
@@ -1640,7 +1640,7 @@ function CustomersTab({ orders }: { orders: Order[] }) {
       <div className="grid grid-cols-3 gap-4 mb-8">
         <StatCard icon={<Users size={24} />} label="Total Customers" value={customers.length} />
         <StatCard icon={<ShoppingBag size={24} />} label="Avg Orders/Customer" value={customers.length ? (orders.length / customers.length).toFixed(1) : 0} />
-        <StatCard icon={<Wallet size={24} />} label="Avg Order Value" value={orders.length ? `${Math.round(orders.reduce((s, o) => s + (o.productTotal || 0), 0) / orders.length)} EGP` : "0"} />
+        <StatCard icon={<Wallet size={24} />} label="Avg Order Value" value={orders.length ? `${Math.round(orders.reduce((s, o) => s + ((o.total || 0) - (o.delivery || 0)), 0) / orders.length)} EGP` : "0"} />
       </div>
 
       <div className="space-y-2">

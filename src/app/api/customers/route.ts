@@ -33,16 +33,6 @@ export async function GET() {
       }
     >();
 
-    function computeProductTotal(itemData: unknown): number {
-      if (!itemData) return 0;
-      const parsed = typeof itemData === "string" ? JSON.parse(itemData as string) : itemData;
-      if (!Array.isArray(parsed)) return 0;
-      return parsed.reduce(
-        (sum: number, item: any) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1),
-        0
-      );
-    }
-
     orders?.forEach((o) => {
       const key = o.phone || o.name || o.id;
       if (!customerMap.has(key)) {
@@ -59,7 +49,7 @@ export async function GET() {
       }
       const c = customerMap.get(key)!;
       c.totalOrders++;
-      c.totalSpent += computeProductTotal(o.items);
+      c.totalSpent += Math.max(0, (Number(o.total) || 0) - (Number(o.delivery_fee) || 0));
       if (o.created_at > c.lastOrder) c.lastOrder = o.created_at;
       if (o.created_at < c.firstOrder) c.firstOrder = o.created_at;
     });
