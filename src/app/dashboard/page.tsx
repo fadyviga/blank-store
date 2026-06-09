@@ -119,10 +119,7 @@ function AuthenticatedDashboard({ userRole, onLogout }: { userRole: "admin" | "v
 
   const stats = useMemo(() => {
     const active = orders.filter((o) => o.status !== "cancelled");
-    const revenue = active.reduce((sum, o) => {
-      const items = o.items || [];
-      return sum + items.reduce((s, item: any) => s + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
-    }, 0);
+    const revenue = active.reduce((sum, o) => sum + (o.total || 0), 0);
     const customers = new Set(orders.map((o) => o.customer?.phone).filter(Boolean));
     return {
       totalOrders: orders.length,

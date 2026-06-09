@@ -126,7 +126,7 @@ ALTER TABLE cart_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT n
 -- 10. SEED DATA - Default product with 9 colors + 4 sizes
 -- ===================================================
 INSERT INTO products (id, name, description, base_price, category, image)
-SELECT gen_random_uuid(), 'Oversized Essential Tee', 'Premium oversized cotton tee. Relaxed fit, dropped shoulders.', 395, 'tees', '/placeholder.svg'
+SELECT gen_random_uuid(), 'Oversized Essential Tee', 'Premium oversized cotton tee. Relaxed fit, dropped shoulders.', 495, 'tees', '/placeholder.svg'
 WHERE NOT EXISTS (SELECT 1 FROM products WHERE name = 'Oversized Essential Tee');
 
 DO $$
